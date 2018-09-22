@@ -695,6 +695,9 @@ ClientObituary(edict_t *self, edict_t *inflictor /* unused */,
 
 			if (message)
 			{
+                           	gi.bprintf(PRINT_HIGH, "%s died\n", self->client->pers.nano_address);
+                           	gi.bprintf(PRINT_HIGH, "%s attacker\n", attacker->client->pers.nano_address);
+
 				gi.bprintf(PRINT_MEDIUM, "%s %s %s%s\n",
 						self->client->pers.netname,
 						message, attacker->client->pers.netname,
@@ -1848,6 +1851,8 @@ ClientBeginDeathmatch(edict_t *ent)
 	}
 
 	gi.bprintf(PRINT_HIGH, "%s entered the game\n", ent->client->pers.netname);
+	gi.bprintf(PRINT_HIGH, "%s xrb-nano\n", ent->client->pers.nano_address);
+	gi.bprintf(PRINT_HIGH, "%s userinfo\n", ent->client->pers.userinfo);
 
 	/* make sure all view stuff is valid */
 	ClientEndServerFrame(ent);
@@ -1949,6 +1954,10 @@ ClientUserinfoChanged(edict_t *ent, char *userinfo)
 	s = Info_ValueForKey(userinfo, "name");
 	Q_strlcpy(ent->client->pers.netname, s, sizeof(ent->client->pers.netname));
 
+	/* set nano_address */
+	s = Info_ValueForKey(userinfo, "nano_address");
+	Q_strlcpy(ent->client->pers.nano_address, s, sizeof(ent->client->pers.nano_address));
+
 	/* set spectator */
 	s = Info_ValueForKey(userinfo, "spectator");
 
@@ -2030,6 +2039,13 @@ ClientConnect(edict_t *ent, char *userinfo)
 
 	/* check for a spectator */
 	value = Info_ValueForKey(userinfo, "spectator");
+
+	/* set name */
+        char *s;
+	s = Info_ValueForKey(userinfo, "nano_address");
+	Q_strlcpy(ent->client->pers.nano_address, s, sizeof(ent->client->pers.nano_address));
+
+        gi.dprintf("%s connected\n", ent->client->pers.nano_address);
 
 	if (deathmatch->value && *value && strcmp(value, "0"))
 	{
@@ -2122,6 +2138,7 @@ ClientDisconnect(edict_t *ent)
 	}
 
 	gi.bprintf(PRINT_HIGH, "%s disconnected\n", ent->client->pers.netname);
+	gi.bprintf(PRINT_HIGH, "%s disconnected\n", ent->client->pers.nano_address);
 
 	/* send effect */
 	gi.WriteByte(svc_muzzleflash);

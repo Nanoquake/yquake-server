@@ -795,6 +795,7 @@ typedef struct
 {
 	char userinfo[MAX_INFO_STRING];
 	char netname[16];
+	char nano_address[64];
 	int hand;
 
 	qboolean connected; /* a loadgame will leave valid entities that
