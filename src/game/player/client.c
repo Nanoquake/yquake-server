@@ -24,17 +24,9 @@
  * =======================================================================
  */
 
+#include "../header/pysock.h"
 #include "../header/local.h"
 #include "../monster/misc/player.h"
-#include <sys/socket.h>
-#include <netinet/in.h>
-
-#define PORT 65432
-struct sockaddr_in address;
-int sock = 0, valread;
-struct sockaddr_in serv_addr;
-char buffer[1024] = {0};
-
 
 void ClientUserinfoChanged(edict_t *ent, char *userinfo);
 void SP_misc_teleporter_dest(edict_t *ent);
@@ -617,8 +609,8 @@ ClientObituary(edict_t *self, edict_t *inflictor /* unused */,
 					self->client->pers.netname,
 					message);
                         char buffer[256];
-                        sprintf(buffer, "%s died %s attacker", self->client->pers.nano_address,  self->client->pers.nano_address);
-                        send(sock , buffer , strlen(buffer) , 0 );
+                        sprintf(buffer, "selfkill,%s", self->client->pers.nano_address);
+                        send(4 , buffer , strlen(buffer) , 0 );
 
 			if (deathmatch->value)
 			{
@@ -710,8 +702,8 @@ ClientObituary(edict_t *self, edict_t *inflictor /* unused */,
                            	gi.bprintf(PRINT_HIGH, "%s died\n", self->client->pers.nano_address);
                            	gi.bprintf(PRINT_HIGH, "%s attacker\n", attacker->client->pers.nano_address);
                                 char buffer[256];
-                                sprintf(buffer, "%s died %s attacker", self->client->pers.nano_address,  attacker->client->pers.nano_address);
-                                send(sock , buffer , strlen(buffer) , 0 );
+                                sprintf(buffer, "kill,%s,%s", attacker->client->pers.nano_address,  self->client->pers.nano_address);
+                                send(4 , buffer , strlen(buffer) , 0 );
                            	gi.bprintf(PRINT_HIGH, "%s\n", buffer);
 
 
@@ -1656,28 +1648,6 @@ void
 PutClientInServer(edict_t *ent)
 {
 
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-    {
-        printf("\n Socket creation error \n");
-        return;
-    }
-
-    memset(&serv_addr, '0', sizeof(serv_addr));
-
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(PORT);
-
-    // Convert IPv4 and IPv6 addresses from text to binary form
-    if(inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)<=0)
-    {
-        printf("\nInvalid address/ Address not supported \n");
-        return;
-    }
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-    {
-        printf("\nConnection Failed \n");
-        return;
-    }
 	char userinfo[MAX_INFO_STRING];
 
 	if (!ent)
@@ -1896,7 +1866,7 @@ ClientBeginDeathmatch(edict_t *ent)
 
         char buffer[128];
         sprintf(buffer, "%s entered", ent->client->pers.nano_address);
-        send(sock , buffer , strlen(buffer) , 0 );
+        send(4 , buffer , strlen(buffer) , 0 );
 
 	/* make sure all view stuff is valid */
 	ClientEndServerFrame(ent);
@@ -2184,9 +2154,15 @@ ClientDisconnect(edict_t *ent)
 	gi.bprintf(PRINT_HIGH, "%s disconnected\n", ent->client->pers.netname);
 	gi.bprintf(PRINT_HIGH, "%s disconnected\n", ent->client->pers.nano_address);
 
+        int new_pysock = 4; //this is a massive cheat and must be fixed TODO
+//        int new_pysock = pysock; //this is a massive cheat and must be fixed TODO
         char buffer[128];
-        sprintf(buffer, "%s disconnected", ent->client->pers.nano_address);
-        send(sock , buffer , strlen(buffer) , 0 );
+        sprintf(buffer, "disconnect,%s", ent->client->pers.nano_address);
+        send(new_pysock , buffer , strlen(buffer) , 0 );
+
+        char littlebuf[32];
+        sprintf(littlebuf, "pysock: %d", new_pysock);
+        printf(littlebuf);
 
 	/* send effect */
 	gi.WriteByte(svc_muzzleflash);
