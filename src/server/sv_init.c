@@ -25,6 +25,9 @@
  */
 
 #include "header/server.h"
+#include "../game/header/pysock.h"
+#include <netinet/in.h>
+#include <sys/socket.h>
 
 server_static_t svs; /* persistant server info */
 server_t sv; /* local server */
@@ -309,6 +312,31 @@ SV_SpawnServer(char *server, char *spawnpoint, server_state_t serverstate,
 void
 SV_InitGame(void)
 {
+//    int pysock = 0;
+    if ((pysock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    {   
+        printf("\n Socket creation error \n");
+        return;
+    }
+
+    memset(&serv_addr, '0', sizeof(serv_addr));
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(PY_PORT);
+
+    // Convert IPv4 and IPv6 addresses from text to binary form
+    if(inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)<=0)
+    {   
+        printf("\nInvalid address/ Address not supported \n");
+        return;
+    }
+    if (connect(pysock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+    {   
+        printf("\nConnection Failed \n");
+        return;
+    }  
+        char buffer[] = "Server Connected";
+        send(pysock , buffer , strlen(buffer) , 0 );
 	int i;
 	edict_t *ent;
 	char idmaster[32];
