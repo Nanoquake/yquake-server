@@ -26,11 +26,10 @@
 
 #include "header/server.h"
 #include "../game/header/pysock.h"
-#include <netinet/in.h>
-#include <sys/socket.h>
 
 server_static_t svs; /* persistant server info */
 server_t sv; /* local server */
+int pysock;
 
 int
 SV_FindIndex(char *name, int start, int max, qboolean create)
@@ -306,13 +305,15 @@ SV_SpawnServer(char *server, char *spawnpoint, server_state_t serverstate,
 	Com_Printf("------------------------------------\n\n");
 }
 
+int get_socket_fd(){
+    return pysock;
+}
 /*
  * A brand new game has been started
  */
 void
 SV_InitGame(void)
 {
-//    int pysock = 0;
     if ((pysock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {   
         printf("\n Socket creation error \n");
@@ -337,6 +338,10 @@ SV_InitGame(void)
     }  
         char buffer[] = "Server Connected";
         send(pysock , buffer , strlen(buffer) , 0 );
+        char littlebuf[32];
+        sprintf(littlebuf, "pysock: %d", pysock);
+        printf(littlebuf);
+
 	int i;
 	edict_t *ent;
 	char idmaster[32];
