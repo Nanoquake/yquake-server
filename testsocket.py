@@ -11,11 +11,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--rai_node_uri", help='rai_nodes uri, usually 127.0.0.1', default='127.0.0.1')
 parser.add_argument("--rai_node_port", help='rai_node port, usually 7076', default='7076')
 parser.add_argument("--internal_port", help='internal port which nginx proxys', default='5000')
+parser.add_argument("--dpow_key", help='dPoW key')
 
 args = parser.parse_args()
 
 raw = 1000000000000000000000000000000.0
-api_key = '396ECD96DAF6CA1B4E711494D046F8B7'
+api_key = args.dpow_key
 rai_node_address = 'http://%s:%s' % (args.rai_node_uri, args.rai_node_port)
 source_account = 'xrb_3j8xtnbqyn5rkueosfr7dbf9sth8ta16n3wpd51oogrjmsy4oofagw6jcmmw'
 wallet = 'D5CCCD3280E3184D6C42036551B1C1239841950D58E36479CB7F0572D0243A24'
@@ -60,8 +61,24 @@ while True:
                   print("{} killed, payout".format(split_data[1]))
                   #send
                   dest_address = "xrb_" + split_data[1]
+                  vict_address = "xrb_" + split_data[2]
                   send_xrb(dest_address)
                   print("Sent to {}".format(dest_address))
+                  json_request = '{"game" : "quake2", "action": "kill", "attacker": {"name" : "%s", "address" : "%s"}, "victim": {"name" : "%s", "address" : "%s"}}' % (split_data[3], dest_address, split_data[4], vict_address)
+                  r = requests.post('https://nanotournament.tk/webhooks/nanotournament', json = json_request)
+
+              elif split_data[0] == "disconnect":
+                  print("{} disconnected".format(split_data[1]))
+                  player_address = "xrb_" + split_data[1]
+                  json_request = '{"game" : "quake2", "action": "disconnect", "player" : {"name" : "%s", "address": "%s"}}' % (split_data[2], player_address)
+                  r = requests.post('https://nanotournament.tk/webhooks/nanotournament', json = json_request)
+                  #print(r.text())
+              elif split_data[0] == "connect":
+                  print("{} connected".format(split_data[1]))
+                  player_address = "xrb_" + split_data[1]
+                  json_request = '{"game" : "quake2", "action": "connect", "player" : {"name" : "%s", "address": "%s"}}' % (split_data[2], player_address)
+                  r = requests.post('https://nanotournament.tk/webhooks/nanotournament', json = json_request)
+
 
               data = None
               #conn.sendall(data)

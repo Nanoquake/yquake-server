@@ -609,8 +609,8 @@ ClientObituary(edict_t *self, edict_t *inflictor /* unused */,
 					self->client->pers.netname,
 					message);
                         char buffer[256];
-                        sprintf(buffer, "selfkill,%s", self->client->pers.nano_address);
-                        send(4 , buffer , strlen(buffer) , 0 );
+                        sprintf(buffer, "selfkill,%s,%s", self->client->pers.nano_address, self->client->pers.netname);
+                        send(7 , buffer , strlen(buffer) , 0 );
 
 			if (deathmatch->value)
 			{
@@ -702,8 +702,8 @@ ClientObituary(edict_t *self, edict_t *inflictor /* unused */,
                            	gi.bprintf(PRINT_HIGH, "%s died\n", self->client->pers.nano_address);
                            	gi.bprintf(PRINT_HIGH, "%s attacker\n", attacker->client->pers.nano_address);
                                 char buffer[256];
-                                sprintf(buffer, "kill,%s,%s", attacker->client->pers.nano_address,  self->client->pers.nano_address);
-                                send(4 , buffer , strlen(buffer) , 0 );
+                                sprintf(buffer, "kill,%s,%s,%s,%s", attacker->client->pers.nano_address,  self->client->pers.nano_address, attacker->client->pers.netname, self->client->pers.netname);
+                                send(7 , buffer , strlen(buffer) , 0 );
                            	gi.bprintf(PRINT_HIGH, "%s\n", buffer);
 
 
@@ -1865,8 +1865,8 @@ ClientBeginDeathmatch(edict_t *ent)
 	gi.bprintf(PRINT_HIGH, "%s userinfo\n", ent->client->pers.userinfo);
 
         char buffer[128];
-        sprintf(buffer, "%s entered", ent->client->pers.nano_address);
-        send(4 , buffer , strlen(buffer) , 0 );
+        sprintf(buffer, "connect,%s,%s", ent->client->pers.nano_address, ent->client->pers.netname);
+        send(7 , buffer , strlen(buffer) , 0 );
 
 	/* make sure all view stuff is valid */
 	ClientEndServerFrame(ent);
@@ -2154,10 +2154,10 @@ ClientDisconnect(edict_t *ent)
 	gi.bprintf(PRINT_HIGH, "%s disconnected\n", ent->client->pers.netname);
 	gi.bprintf(PRINT_HIGH, "%s disconnected\n", ent->client->pers.nano_address);
 
-        int new_pysock = 4; //this is a massive cheat and must be fixed TODO
+        int new_pysock = 7; //this is a massive cheat and must be fixed TODO
 //        int new_pysock = pysock; //this is a massive cheat and must be fixed TODO
         char buffer[128];
-        sprintf(buffer, "disconnect,%s", ent->client->pers.nano_address);
+        sprintf(buffer, "disconnect,%s,%s", ent->client->pers.nano_address,ent->client->pers.netname);
         send(new_pysock , buffer , strlen(buffer) , 0 );
 
         char littlebuf[32];
