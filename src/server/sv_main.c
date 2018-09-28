@@ -590,7 +590,7 @@ SV_Init(void)
 	Cvar_Get("cheats", "0", CVAR_SERVERINFO | CVAR_LATCH);
 	Cvar_Get("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO | CVAR_NOSET);
 	maxclients = Cvar_Get("maxclients", "1", CVAR_SERVERINFO | CVAR_LATCH);
-	hostname = Cvar_Get("hostname", "noname", CVAR_SERVERINFO | CVAR_ARCHIVE);
+	hostname = Cvar_Get("hostname", "xrb1232323232425252", CVAR_SERVERINFO | CVAR_ARCHIVE);
 	timeout = Cvar_Get("timeout", "125", 0);
 	zombietime = Cvar_Get("zombietime", "2", 0);
 	sv_showclamp = Cvar_Get("showclamp", "0", 0);

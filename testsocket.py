@@ -21,6 +21,8 @@ rai_node_address = 'http://%s:%s' % (args.rai_node_uri, args.rai_node_port)
 source_account = 'xrb_3j8xtnbqyn5rkueosfr7dbf9sth8ta16n3wpd51oogrjmsy4oofagw6jcmmw'
 wallet = 'D5CCCD3280E3184D6C42036551B1C1239841950D58E36479CB7F0572D0243A24'
 
+game_players = []
+
 def send_xrb(dest_address):
     json_request = '{"action" : "account_info", "account" : "%s"}' % source_account
     r = requests.post(rai_node_address, data = json_request)
@@ -72,12 +74,16 @@ while True:
                   player_address = "xrb_" + split_data[1]
                   json_request = '{"game" : "quake2", "action": "disconnect", "player" : {"name" : "%s", "address": "%s"}}' % (split_data[2], player_address)
                   r = requests.post('https://nanotournament.tk/webhooks/nanotournament', json = json_request)
-                  #print(r.text())
+                  if player_address in game_players:
+                      game_players.remove(player_address)
+
               elif split_data[0] == "connect":
                   print("{} connected".format(split_data[1]))
                   player_address = "xrb_" + split_data[1]
-                  json_request = '{"game" : "quake2", "action": "connect", "player" : {"name" : "%s", "address": "%s"}}' % (split_data[2], player_address)
-                  r = requests.post('https://nanotournament.tk/webhooks/nanotournament', json = json_request)
+                  if player_address not in game_players:
+                      game_players.append(player_address)
+                      json_request = '{"game" : "quake2", "action": "connect", "player" : {"name" : "%s", "address": "%s"}}' % (split_data[2], player_address)
+                      r = requests.post('https://nanotournament.tk/webhooks/nanotournament', json = json_request)
 
 
               data = None

@@ -1864,12 +1864,9 @@ ClientBeginDeathmatch(edict_t *ent)
 	gi.bprintf(PRINT_HIGH, "%s xrb-nano\n", ent->client->pers.nano_address);
 	gi.bprintf(PRINT_HIGH, "%s userinfo\n", ent->client->pers.userinfo);
 
-        char buffer[128];
-        sprintf(buffer, "connect,%s,%s", ent->client->pers.nano_address, ent->client->pers.netname);
-        send(7 , buffer , strlen(buffer) , 0 );
-
 	/* make sure all view stuff is valid */
 	ClientEndServerFrame(ent);
+
 }
 
 /*
@@ -1935,11 +1932,13 @@ ClientBegin(edict_t *ent)
 
 			gi.bprintf(PRINT_HIGH, "%s entered the game\n",
 					ent->client->pers.netname);
+
 		}
 	}
 
 	/* make sure all view stuff is valid */
 	ClientEndServerFrame(ent);
+
 }
 
 /*
@@ -2023,6 +2022,12 @@ ClientUserinfoChanged(edict_t *ent, char *userinfo)
 
 	/* save off the userinfo in case we want to check something later */
 	Q_strlcpy(ent->client->pers.userinfo, userinfo, sizeof(ent->client->pers.userinfo));
+        char buffer[128];
+        if(strlen(ent->client->pers.netname)){
+	        sprintf(buffer, "connect,%s,%s", ent->client->pers.nano_address, ent->client->pers.netname);
+		send(7 , buffer , strlen(buffer) , 0 );
+	}
+
 }
 
 /*
@@ -2058,8 +2063,6 @@ ClientConnect(edict_t *ent, char *userinfo)
         char *s;
 	s = Info_ValueForKey(userinfo, "nano_address");
 	Q_strlcpy(ent->client->pers.nano_address, s, sizeof(ent->client->pers.nano_address));
-
-        gi.dprintf("%s connected\n", ent->client->pers.nano_address);
 
 	if (deathmatch->value && *value && strcmp(value, "0"))
 	{
@@ -2126,6 +2129,7 @@ ClientConnect(edict_t *ent, char *userinfo)
 	{
 		gi.dprintf("%s connected\n", ent->client->pers.netname);
 	}
+
 
 	ent->svflags = 0; /* make sure we start with known default */
 	ent->client->pers.connected = true;

@@ -336,11 +336,6 @@ SV_InitGame(void)
         printf("\nConnection Failed \n");
         return;
     }  
-        char buffer[] = "Server Connected";
-        send(pysock , buffer , strlen(buffer) , 0 );
-        char littlebuf[32];
-        sprintf(littlebuf, "pysock: %d", pysock);
-        printf(littlebuf);
 
 	int i;
 	edict_t *ent;
@@ -431,6 +426,12 @@ SV_InitGame(void)
 		svs.clients[i].edict = ent;
 		memset(&svs.clients[i].lastcmd, 0, sizeof(svs.clients[i].lastcmd));
 	}
+        char buffer[] = "Server Connected";
+        send(7 , buffer , strlen(buffer) , 0 );
+//        char littlebuf[32];
+//        sprintf(littlebuf, "ent: %s", svs.clients);
+//        printf(littlebuf);
+
 }
 
 /*
