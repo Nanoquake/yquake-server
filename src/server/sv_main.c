@@ -587,6 +587,7 @@ SV_Init(void)
 	Cvar_Get("dmflags", va("%i", DF_INSTANT_ITEMS), CVAR_SERVERINFO);
 	Cvar_Get("fraglimit", "0", CVAR_SERVERINFO);
 	Cvar_Get("timelimit", "0", CVAR_SERVERINFO);
+	Cvar_Get("game_nano", "xrb_12323232", CVAR_SERVERINFO);
 	Cvar_Get("cheats", "0", CVAR_SERVERINFO | CVAR_LATCH);
 	Cvar_Get("protocol", va("%i", PROTOCOL_VERSION), CVAR_SERVERINFO | CVAR_NOSET);
 	maxclients = Cvar_Get("maxclients", "1", CVAR_SERVERINFO | CVAR_LATCH);

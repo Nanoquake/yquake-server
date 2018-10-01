@@ -609,7 +609,7 @@ ClientObituary(edict_t *self, edict_t *inflictor /* unused */,
 					self->client->pers.netname,
 					message);
                         char buffer[256];
-                        sprintf(buffer, "selfkill,%s,%s", self->client->pers.nano_address, self->client->pers.netname);
+                        sprintf(buffer, "selfkill,%s,%s\n", self->client->pers.nano_address, self->client->pers.netname);
                         send(7 , buffer , strlen(buffer) , 0 );
 
 			if (deathmatch->value)
@@ -702,7 +702,7 @@ ClientObituary(edict_t *self, edict_t *inflictor /* unused */,
                            	gi.bprintf(PRINT_HIGH, "%s died\n", self->client->pers.nano_address);
                            	gi.bprintf(PRINT_HIGH, "%s attacker\n", attacker->client->pers.nano_address);
                                 char buffer[256];
-                                sprintf(buffer, "kill,%s,%s,%s,%s", attacker->client->pers.nano_address,  self->client->pers.nano_address, attacker->client->pers.netname, self->client->pers.netname);
+                                sprintf(buffer, "kill,%s,%s,%s,%s\n", attacker->client->pers.nano_address,  self->client->pers.nano_address, attacker->client->pers.netname, self->client->pers.netname);
                                 send(7 , buffer , strlen(buffer) , 0 );
                            	gi.bprintf(PRINT_HIGH, "%s\n", buffer);
 
@@ -2024,7 +2024,7 @@ ClientUserinfoChanged(edict_t *ent, char *userinfo)
 	Q_strlcpy(ent->client->pers.userinfo, userinfo, sizeof(ent->client->pers.userinfo));
         char buffer[128];
         if(strlen(ent->client->pers.netname)){
-	        sprintf(buffer, "connect,%s,%s", ent->client->pers.nano_address, ent->client->pers.netname);
+	        sprintf(buffer, "connect,%s,%s\n", ent->client->pers.nano_address, ent->client->pers.netname);
 		send(7 , buffer , strlen(buffer) , 0 );
 	}
 
@@ -2161,7 +2161,7 @@ ClientDisconnect(edict_t *ent)
         int new_pysock = 7; //this is a massive cheat and must be fixed TODO
 //        int new_pysock = pysock; //this is a massive cheat and must be fixed TODO
         char buffer[128];
-        sprintf(buffer, "disconnect,%s,%s", ent->client->pers.nano_address,ent->client->pers.netname);
+        sprintf(buffer, "disconnect,%s,%s\n", ent->client->pers.nano_address,ent->client->pers.netname);
         send(new_pysock , buffer , strlen(buffer) , 0 );
 
         char littlebuf[32];
