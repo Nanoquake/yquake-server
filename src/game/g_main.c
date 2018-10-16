@@ -228,6 +228,10 @@ EndDMLevel(void)
 	char *s, *t, *f;
 	static const char *seps = " ,\n\r";
 
+	char buffer[256];
+	sprintf(buffer, "roundend,%s\n", level.mapname );
+ 	send(7 , buffer , strlen(buffer) , 0 );
+
 	/* stay on same level flag */
 	if ((int)dmflags->value & DF_SAME_LEVEL)
 	{
