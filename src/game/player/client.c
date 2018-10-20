@@ -1864,6 +1864,7 @@ ClientBeginDeathmatch(edict_t *ent)
 	gi.bprintf(PRINT_HIGH, "%s xrb-nano\n", ent->client->pers.nano_address);
 	gi.bprintf(PRINT_HIGH, "%s userinfo\n", ent->client->pers.userinfo);
 
+	gi.centerprintf (ent, "Welcome !\n\n`pay_nano` to pay funds to the server\n`nano_balance` to check your balance\n");
 	/* make sure all view stuff is valid */
 	ClientEndServerFrame(ent);
 

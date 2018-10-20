@@ -81,6 +81,7 @@ SV_SetMaster_f(void)
 	}
 
 	svs.last_heartbeat = -9999999;
+	svs.last_check = -9999999;
 }
 
 /*
@@ -425,6 +426,7 @@ void
 SV_Heartbeat_f(void)
 {
 	svs.last_heartbeat = -9999999;
+	svs.last_check = -9999999;
 }
 
 /*

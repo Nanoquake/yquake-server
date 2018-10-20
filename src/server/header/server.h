@@ -164,6 +164,7 @@ typedef struct
 	entity_state_t *client_entities;    /* [num_client_entities] */
 
 	int last_heartbeat;
+	int last_check;
 
 	challenge_t challenges[MAX_CHALLENGES];    /* to prevent invalid IPs from connecting */
 

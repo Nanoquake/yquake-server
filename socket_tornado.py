@@ -180,6 +180,10 @@ class SimpleTcpClient(object):
                     game_players.clear()
                     paid_in_players.clear()
 
+                elif split_data[0] == "poll":
+                    return_string = "Test123"
+                    yield self.stream.write(return_string.encode('ascii'))
+
         except tornado.iostream.StreamClosedError:
             pass
 
