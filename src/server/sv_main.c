@@ -463,17 +463,12 @@ Master_Heartbeat(void)
 		svs.last_heartbeat = svs.realtime;
 	}
 
-	if (svs.last_check > svs.realtime)
-	{
-		svs.last_check = svs.realtime;
-	}
-
 	if (svs.realtime - svs.last_check > CHECK_SECONDS * 1000)
 	{
 		Com_Printf("Check Poll\n");
                 char buffer[256];
                 sprintf(buffer, "poll,0\n");
-                send(7 , buffer , strlen(buffer) , 0 );
+                send(5 , buffer , strlen(buffer) , 0 );
  		char server_reply[1024];
 
 		if( recv(7 , server_reply , 1024 , 0) < 0)
@@ -486,6 +481,12 @@ Master_Heartbeat(void)
    		svs.last_check = svs.realtime;
 
 	}
+
+	if (svs.last_check > svs.realtime)
+	{
+		svs.last_check = svs.realtime;
+	}
+
 
 
 	if (svs.realtime - svs.last_heartbeat < HEARTBEAT_SECONDS * 1000)

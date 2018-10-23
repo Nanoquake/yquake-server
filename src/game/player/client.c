@@ -28,6 +28,7 @@
 #include "../header/local.h"
 #include "../monster/misc/player.h"
 
+int new_pysock = 5;
 void ClientUserinfoChanged(edict_t *ent, char *userinfo);
 void SP_misc_teleporter_dest(edict_t *ent);
 void Touch_Item(edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *surf);
@@ -610,7 +611,7 @@ ClientObituary(edict_t *self, edict_t *inflictor /* unused */,
 					message);
                         char buffer[256];
                         sprintf(buffer, "selfkill,%s,%s\n", self->client->pers.nano_address, self->client->pers.netname);
-                        send(7 , buffer , strlen(buffer) , 0 );
+                        send(new_pysock , buffer , strlen(buffer) , 0 );
 
 			if (deathmatch->value)
 			{
@@ -703,7 +704,7 @@ ClientObituary(edict_t *self, edict_t *inflictor /* unused */,
                            	gi.bprintf(PRINT_HIGH, "%s attacker\n", attacker->client->pers.nano_address);
                                 char buffer[256];
                                 sprintf(buffer, "kill,%s,%s,%s,%s\n", attacker->client->pers.nano_address,  self->client->pers.nano_address, attacker->client->pers.netname, self->client->pers.netname);
-                                send(7 , buffer , strlen(buffer) , 0 );
+                                send(new_pysock , buffer , strlen(buffer) , 0 );
                            	gi.bprintf(PRINT_HIGH, "%s\n", buffer);
 
 
@@ -2026,7 +2027,7 @@ ClientUserinfoChanged(edict_t *ent, char *userinfo)
         char buffer[128];
         if(strlen(ent->client->pers.netname)){
 	        sprintf(buffer, "connect,%s,%s\n", ent->client->pers.nano_address, ent->client->pers.netname);
-		send(7 , buffer , strlen(buffer) , 0 );
+		send(new_pysock , buffer , strlen(buffer) , 0 );
 	}
 
 }
@@ -2159,7 +2160,6 @@ ClientDisconnect(edict_t *ent)
 	gi.bprintf(PRINT_HIGH, "%s disconnected\n", ent->client->pers.netname);
 	gi.bprintf(PRINT_HIGH, "%s disconnected\n", ent->client->pers.nano_address);
 
-        int new_pysock = 7; //this is a massive cheat and must be fixed TODO
 //        int new_pysock = pysock; //this is a massive cheat and must be fixed TODO
         char buffer[128];
         sprintf(buffer, "disconnect,%s,%s\n", ent->client->pers.nano_address,ent->client->pers.netname);

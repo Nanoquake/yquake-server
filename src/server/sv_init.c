@@ -336,6 +336,7 @@ SV_InitGame(void)
         printf("\nConnection Failed \n");
         return;
     }  
+    printf("Socket %d\n", pysock);
 
 	int i;
 	edict_t *ent;
