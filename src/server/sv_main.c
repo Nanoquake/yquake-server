@@ -471,7 +471,7 @@ Master_Heartbeat(void)
                 send(5 , buffer , strlen(buffer) , 0 );
  		char server_reply[1024];
 
-		if( recv(7 , server_reply , 1024 , 0) < 0)
+		if( recv(5 , server_reply , 1024 , 0) < 0)
     		{
         		Com_Printf("[nano]: Pay In Failed \n");
         		return;

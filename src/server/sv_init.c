@@ -429,7 +429,7 @@ SV_InitGame(void)
 		memset(&svs.clients[i].lastcmd, 0, sizeof(svs.clients[i].lastcmd));
 	}
         char buffer[] = "Server Connected\n";
-        send(7 , buffer , strlen(buffer) , 0 );
+        send(5 , buffer , strlen(buffer) , 0 );
 //        char littlebuf[32];
 //        sprintf(littlebuf, "ent: %s", svs.clients);
 //        printf(littlebuf);
