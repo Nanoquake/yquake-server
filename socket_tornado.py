@@ -142,7 +142,7 @@ class SimpleTcpClient(object):
                 print("{} {}".format(time.strftime("%d/%m/%Y %H:%M:%S"),line))
                 split_data = line.rstrip().decode('utf8').split(",")
                 if split_data[0] == "selfkill":
-                    print("{} killed themselves, no payout".format(name_address[split_data[1]]))
+                    print("{} killed themselves, no payout".format(split_data[1]))
                 elif split_data[0] == "kill":
                     print("{} killed, payout".format(split_data[1]))
                     #send
@@ -208,7 +208,10 @@ class SimpleTcpClient(object):
                     for messages in message_list:
                         return_string += messages
                         return_string += '\n'
-                    return_string += "{} players have paid in".format(len(paid_in_players))
+                    return_string += "{} players have paid in\n".format(len(paid_in_players))
+                    for player in paid_in_players:
+                        return_string += "{} ".format(name_address[player])
+
                     message_list.clear()
                     print("Return String: {}".format(return_string))
                     yield self.stream.write(return_string.encode('ascii'))
