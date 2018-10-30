@@ -27,6 +27,21 @@
 #include "header/server.h"
 #include "../game/header/pysock.h"
 
+#ifdef __WIN32__
+# include <winsock2.h>
+#else
+# include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#endif
+
+#include <unistd.h>
+
+#define PORT 65432
+struct sockaddr_in address;
+int sock = 0;
+struct sockaddr_in serv_addr;
+
 #define HEARTBEAT_SECONDS 300
 #define CHECK_SECONDS 5
 
@@ -465,20 +480,59 @@ Master_Heartbeat(void)
 
 	if (svs.realtime - svs.last_check > CHECK_SECONDS * 1000)
 	{
-		Com_Printf("Check Poll\n");
-                char buffer[256];
-                sprintf(buffer, "poll,0\n");
-                send(5 , buffer , strlen(buffer) , 0 );
- 		char server_reply[1024];
 
-		if( recv(5 , server_reply , 1024 , 0) < 0)
+#ifdef __WIN32__
+   		WORD versionWanted = MAKEWORD(1, 1);
+   		WSADATA wsaData;
+   		WSAStartup(versionWanted, &wsaData);
+#endif
+    		if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    		{
+        		Com_Printf("[nano]: Socket creation error \n");
+        		return;
+    		}
+    		memset(&serv_addr, '0', sizeof(serv_addr));
+    		serv_addr.sin_family = AF_INET;
+    		serv_addr.sin_port = htons(PORT);
+    		// Convert IPv4 and IPv6 addresses from text to binary form
+    		if(inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr)<=0)
+    		{
+        		Com_Printf("[nano]: Invalid address/ Address not supported \n");
+        		return;
+    		}
+    		if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+    		{
+        		Com_Printf("[nano]: Connection Failed \n");
+        		return;
+	         }
+
+		Com_Printf("Check Poll\n");
+                char buffer[] = "poll,0\n";
+                send(sock , buffer , strlen(buffer) , 0 );
+
+ 		char server_reply[1024] = {0};
+    		int numbytes = recv(sock, server_reply , 1024 , 0);
+                server_reply[numbytes + 1 ] = '\0';
+		printf("Numbytes %d %s\n", numbytes, server_reply);
+
+		if( numbytes < 0)
     		{
         		Com_Printf("[nano]: Pay In Failed \n");
         		return;
     		}
-    		//int numbytes = recv(sock , server_reply , 1023 , 0);
-		Com_Printf("[nano]: %s\n", server_reply);
+                else if (numbytes > 2){
+			SV_BroadcastPrintf(PRINT_HIGH,"[nano]: %s\n", server_reply);
+		}
    		svs.last_check = svs.realtime;
+#ifdef __WIN32__
+  		/* winsock requires a special function for sockets */
+  		shutdown(sock, SD_BOTH);
+  		closesocket(sock);
+  		/* clean up winsock */
+  		WSACleanup();  
+#else
+  		close(sock);
+#endif
 
 	}
 

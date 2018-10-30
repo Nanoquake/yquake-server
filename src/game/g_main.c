@@ -25,6 +25,7 @@
  */
 
 #include "header/local.h"
+#include "header/pysock.h"
 
 game_locals_t game;
 level_locals_t level;
@@ -230,7 +231,7 @@ EndDMLevel(void)
 
 	char buffer[256];
 	sprintf(buffer, "roundend,%s\n", level.mapname );
- 	send(7 , buffer , strlen(buffer) , 0 );
+ 	send(PYSOCKFD , buffer , strlen(buffer) , 0 );
 
 	/* stay on same level flag */
 	if ((int)dmflags->value & DF_SAME_LEVEL)

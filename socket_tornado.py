@@ -6,7 +6,7 @@ import tornado.ioloop
 import tornado.iostream
 import tornado.tcpserver
 import time, requests, argparse, random
-from operator import itemgetter 
+from operator import itemgetter
 
 HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
 PORT = 65432        # Port to listen on (non-privileged ports are > 1023)
@@ -28,34 +28,51 @@ frag_limit = 20
 
 game_players = []
 paid_in_players = []
+message_list = []
+name_address = {}
 account_count = 0
 scoreboard = {}
 
+def get_data(json_request):
+    try:
+        r = requests.post(rai_node_address, data = json_request)
+        return r
+    except:
+        message_list.append("Error - no connection to Nano node")
+        return "Error"
+
 def get_frontier(account):
     json_request = '{"action" : "account_info", "account" : "%s"}' % source_account
-    r = requests.post(rai_node_address, data = json_request)
+    r = get_data(json_request)
+    if r == "Error":
+        return "Error"
     resulting_data = r.json()
     frontier = resulting_data['frontier']
     return frontier
 
 def get_balance(account):
     json_request = '{"action" : "account_balance", "account" : "%s"}' % source_account
-    r = requests.post(rai_node_address, data = json_request)
+    r = get_data(json_request)
+    if r == "Error":
+        return "Error"
     resulting_data = r.json()
     balance = resulting_data['balance']
     return balance
 
 def get_account_count(account):
     json_request = '{"action" : "account_block_count", "account" : "%s"}' % source_account
-    r = requests.post(rai_node_address, data = json_request)
+    r = get_data(json_request)
+    if r == "Error":
+        return "Error"
     resulting_data = r.json()
     account_count = resulting_data['block_count']
     return account_count
 
 def get_account_history(account, count):
     json_request = '{"action" : "account_history", "account" : "%s", "count" : "%d"}' % (source_account, count)
-    print(json_request)
-    r = requests.post(rai_node_address, data = json_request)
+    r = get_data(json_request)
+    if r == "Error":
+        return "Error"
     resulting_data = r.json()
     account_history = resulting_data['history']
     return account_history
@@ -85,7 +102,9 @@ def send_xrb(dest_address, amount):
     print(work)
     json_request = '{"action" : "send", "wallet" : "%s", "source" : "%s", "destination" : "%s", "amount" : "%d", "work" : "%s"}' % (wallet, source_account, dest_address, amount, work)
     try:
-        r = requests.post(rai_node_address, data = json_request)
+        r = get_data(json_request)
+        if r == "Error":
+            return "Error"
         resulting_data = r.json()
         print(resulting_data)
         amount_Nano = float(amount) / raw
@@ -120,11 +139,10 @@ class SimpleTcpClient(object):
             while True:
                 line = yield self.stream.read_until(b'\n')
                 self.log('got |%s|' % line.decode('utf-8').strip())
-                yield self.stream.write(line)
                 print("{} {}".format(time.strftime("%d/%m/%Y %H:%M:%S"),line))
                 split_data = line.rstrip().decode('utf8').split(",")
                 if split_data[0] == "selfkill":
-                    print("{} killed themselves, no payout".format(split_data[1]))
+                    print("{} killed themselves, no payout".format(name_address[split_data[1]]))
                 elif split_data[0] == "kill":
                     print("{} killed, payout".format(split_data[1]))
                     #send
@@ -160,6 +178,7 @@ class SimpleTcpClient(object):
                         print(json_request)
                         r = requests.post('https://nanotournament.tk/webhooks/nanotournament', json = json_request)
 #                       print(r.text)
+                        name_address[player_address] = split_data[2]
 
                 elif split_data[0] == "roundend":
                     print("{} round ended".format(split_data[1]))
@@ -179,9 +198,19 @@ class SimpleTcpClient(object):
                     scoreboard.clear()
                     game_players.clear()
                     paid_in_players.clear()
+                    message_list.append("The winner is {}".format(name_address[winner]))
+                    name_address.clear()
+
 
                 elif split_data[0] == "poll":
-                    return_string = "Test123"
+                    return_string = " "
+                    print(message_list)
+                    for messages in message_list:
+                        return_string += messages
+                        return_string += '\n'
+                    return_string += "{} players have paid in".format(len(paid_in_players))
+                    message_list.clear()
+                    print("Return String: {}".format(return_string))
                     yield self.stream.write(return_string.encode('ascii'))
 
         except tornado.iostream.StreamClosedError:
@@ -232,6 +261,7 @@ def check_account():
                 if blocks['account'] in game_players and int(blocks['amount']) >= 10000000000000000000000000000 and blocks['account'] not in paid_in_players:
                     print("{} has paid in".format(blocks['account']))
                     paid_in_players.append(blocks['account'])
+                    message_list.append("{} has paid in".format(blocks['account']))
         account_count = current_count
 
 def main():
