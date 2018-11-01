@@ -634,14 +634,14 @@ ClientObituary(edict_t *self, edict_t *inflictor /* unused */,
 					message = "was gunned down by";
 					break;
 				case MOD_SSHOTGUN:
-					message = "was blown away by";
+					message = "was torn a new block-lattice by";
 					message2 = "'s super shotgun";
 					break;
 				case MOD_MACHINEGUN:
-					message = "was machinegunned by";
+					message = "got their seed scrambled by";
 					break;
 				case MOD_CHAINGUN:
-					message = "was cut in half by";
+					message = "was double spent by";
 					message2 = "'s chaingun";
 					break;
 				case MOD_GRENADE:
@@ -653,15 +653,15 @@ ClientObituary(edict_t *self, edict_t *inflictor /* unused */,
 					message2 = "'s shrapnel";
 					break;
 				case MOD_ROCKET:
-					message = "ate";
-					message2 = "'s rocket";
+					message = "got rekt";
+					message2 = "'s raicket";
 					break;
 				case MOD_R_SPLASH:
 					message = "almost dodged";
-					message2 = "'s rocket";
+					message2 = "'s raicket";
 					break;
 				case MOD_HYPERBLASTER:
-					message = "was melted by";
+					message = "was 51 percent attacked by";
 					message2 = "'s hyperblaster";
 					break;
 				case MOD_RAILGUN:
@@ -692,7 +692,7 @@ ClientObituary(edict_t *self, edict_t *inflictor /* unused */,
 					message2 = "'s pain";
 					break;
 				case MOD_TELEFRAG:
-					message = "tried to invade";
+					message = "tried to fork";
 					message2 = "'s personal space";
 					break;
 			}
