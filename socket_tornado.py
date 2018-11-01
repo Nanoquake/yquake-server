@@ -191,20 +191,38 @@ class SimpleTcpClient(object):
                     for key, value in sorted(scoreboard.items(), key = itemgetter(1), reverse = True):
                         print("{}: {}".format(key, value))
                         if winner == None:
-                            final_payout(key)
                             winner = key
+                            message_list.append("The winner is {}".format(name_address[winner]))
+                            final_payout(winner)
+
+                    #Here if there have been no kills then we should refund the players
+                    if winner == None:
+                        num_paid_in = len(paid_in_players)
+                        if num_paid_in == 1:
+                            amount = get_balance(source_account)
+                            send_xrb(paid_in_players[0], int(amount))
+                            print('Refund :{}'.format(amount))
+                        elif num_paid_in > 1:
+                           #We need to calculate how much to give
+                            message_list.append("No Winners so refunding players")
+                            amount = int(get_balance(source_account)) / num_paid_in
+
+                            for players in paid_in_players:
+                                #Use send xrb function to send
+                                send_xrb(players, int(amount))
+                        else:
+                            message_list.append("No players paid in, rolling over funds")
 
                     #Clear list
                     scoreboard.clear()
                     game_players.clear()
                     paid_in_players.clear()
-                    message_list.append("The winner is {}".format(name_address[winner]))
                     name_address.clear()
 
 
                 elif split_data[0] == "poll":
                     return_string = " "
-                    print(message_list)
+                    #print(message_list)
                     for messages in message_list:
                         return_string += messages
                         return_string += '\n'
@@ -213,7 +231,7 @@ class SimpleTcpClient(object):
                         return_string += "{} ".format(name_address[player])
 
                     message_list.clear()
-                    print("Return String: {}".format(return_string))
+                    #print("Return String: {}".format(return_string))
                     yield self.stream.write(return_string.encode('ascii'))
 
         except tornado.iostream.StreamClosedError:
@@ -251,7 +269,7 @@ def check_account():
     print(paid_in_players)
 
     global account_count
-    print("Update {}".format(time.time()))
+    #print("Update {}".format(time.time()))
     current_count = get_account_count(source_account)
     if(int(current_count) > int(account_count)):
         count = int(current_count) - int(account_count)
