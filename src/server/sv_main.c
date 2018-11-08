@@ -28,7 +28,7 @@
 #include "../game/header/pysock.h"
 
 #define HEARTBEAT_SECONDS 300
-#define CHECK_SECONDS 5
+#define CHECK_SECONDS 10
 
 netadr_t master_adr[MAX_MASTERS]; /* address of group servers */
 
@@ -466,22 +466,23 @@ Master_Heartbeat(void)
 	if (svs.realtime - svs.last_check > CHECK_SECONDS * 1000)
 	{
 
-		Com_Printf("Check Poll\n");
+		//Com_Printf("Check Poll\n");
                 char buffer[] = "poll,0\n";
                 send(PYSOCKFD , buffer , strlen(buffer) , 0 );
 
  		char server_reply[1024] = {0};
     		int numbytes = recv(PYSOCKFD, server_reply , 1024 , 0);
                 server_reply[numbytes + 1 ] = '\0';
-		printf("Numbytes %d %s\n", numbytes, server_reply);
+		//printf("Numbytes %d %s\n", numbytes, server_reply);
 
 		if( numbytes < 0)
     		{
-        		Com_Printf("[nano]: Pay In Failed \n");
+        		Com_Printf("[nano]: Poll failed \n");
         		return;
     		}
                 else if (numbytes > 2){
 			SV_BroadcastPrintf(PRINT_HIGH,"[nano]: %s\n", server_reply);
+			SV_BroadcastPrintf(PRINT_HIGH,"[nano]: %d\n", svs.realtime);
 		}
    		svs.last_check = svs.realtime;
 

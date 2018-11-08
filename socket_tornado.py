@@ -6,6 +6,7 @@ import tornado.ioloop
 import tornado.iostream
 import tornado.tcpserver
 import time, requests, argparse, random
+import _thread
 from operator import itemgetter
 
 HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
@@ -25,6 +26,7 @@ rai_node_address = 'http://%s:%s' % (args.rai_node_uri, args.rai_node_port)
 source_account = 'xrb_3j8xtnbqyn5rkueosfr7dbf9sth8ta16n3wpd51oogrjmsy4oofagw6jcmmw'
 wallet = 'D5CCCD3280E3184D6C42036551B1C1239841950D58E36479CB7F0572D0243A24'
 frag_limit = 20
+game_time = [-1]
 
 game_players = []
 paid_in_players = []
@@ -84,14 +86,16 @@ def kill_payout(dest_address):
 #    amount = int(1000000000000000000000000000)
     print('{}'.format(amount))
     #Use send xrb function to send
-    send_xrb(dest_address, amount)
+    _thread.start_new_thread(send_xrb, (dest_address, amount,))
+    #send_xrb(dest_address, amount)
 
 def final_payout(dest_address):
     #We need to calculate how much to give
     amount = get_balance(source_account)
     print('{}'.format(amount))
     #Use send xrb function to send
-    send_xrb(dest_address, int(amount))
+    _thread.start_new_thread(send_xrb, (dest_address, int(amount),))
+    #send_xrb(dest_address, int(amount))
 
 def send_xrb(dest_address, amount):
     hash = get_frontier(source_account)
@@ -171,6 +175,8 @@ class SimpleTcpClient(object):
 
                 elif split_data[0] == "connect":
                     print("{} connected".format(split_data[1]))
+                    if game_time[0] == -1:
+                        game_time[0] = time.time() + 600
                     player_address = "xrb_" + split_data[1]
                     if player_address not in game_players:
                         game_players.append(player_address)
@@ -200,7 +206,9 @@ class SimpleTcpClient(object):
                         num_paid_in = len(paid_in_players)
                         if num_paid_in == 1:
                             amount = get_balance(source_account)
-                            send_xrb(paid_in_players[0], int(amount))
+                            _thread.start_new_thread(send_xrb, (dest_address, int(amount),))
+
+                            #send_xrb(paid_in_players[0], int(amount))
                             print('Refund :{}'.format(amount))
                         elif num_paid_in > 1:
                            #We need to calculate how much to give
@@ -209,10 +217,14 @@ class SimpleTcpClient(object):
 
                             for players in paid_in_players:
                                 #Use send xrb function to send
-                                send_xrb(players, int(amount))
+                                _thread.start_new_thread(send_xrb, (dest_address, int(amount),))
+
+                            #    send_xrb(players, int(amount))
                         else:
                             message_list.append("No players paid in, rolling over funds")
 
+                    #Reset game_time
+                    game_time[0] = time.time() + 600
                     #Clear list
                     scoreboard.clear()
                     game_players.clear()
@@ -226,7 +238,7 @@ class SimpleTcpClient(object):
                     for messages in message_list:
                         return_string += messages
                         return_string += '\n'
-                    return_string += "{} players have paid in\n".format(len(paid_in_players))
+                    return_string += "{} players have paid in".format(len(paid_in_players))
                     for player in paid_in_players:
                         return_string += "{} ".format(name_address[player])
 
@@ -279,10 +291,19 @@ def check_account():
             if blocks['type'] == 'receive':
                 print(blocks)
                 #0.01
-                if blocks['account'] in game_players and int(blocks['amount']) >= 10000000000000000000000000000 and blocks['account'] not in paid_in_players:
+                if blocks['account'] in game_players and blocks['account'] in paid_in_players:
+                    print("Double Pay - return to sender {}".format(blocks['account']))
+                    _thread.start_new_thread(send_xrb, (dest_address, int(amount),))
+
+                    #send_xrb(blocks['account'], int(blocks['amount']))
+                    message_list.append("{} tried to double pay".format(name_address[blocks['account']]))
+
+
+                elif blocks['account'] in game_players and int(blocks['amount']) >= 10000000000000000000000000000 and blocks['account'] not in paid_in_players:
                     print("{} has paid in".format(blocks['account']))
                     paid_in_players.append(blocks['account'])
                     message_list.append("{} has paid in".format(blocks['account']))
+
         account_count = current_count
 
 def main():

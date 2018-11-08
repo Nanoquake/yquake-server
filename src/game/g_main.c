@@ -350,6 +350,16 @@ CheckDMRules(void)
 
 	if (timelimit->value)
 	{
+		if (level.time + 60 == timelimit->value * 60)
+		{
+			gi.bprintf (PRINT_HIGH, "1 min to timelimit \n \n \n");
+			gi.soundindex ("world/x_alarm.wav");
+		}
+		if (level.time + 120 == timelimit->value * 60)
+		{
+			gi.bprintf (PRINT_HIGH, "2 min to timelimit \n \n \n");
+		}
+
 		if (level.time >= timelimit->value * 60)
 		{
 			gi.bprintf(PRINT_HIGH, "Timelimit hit.\n");
