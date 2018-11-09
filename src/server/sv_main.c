@@ -482,7 +482,7 @@ Master_Heartbeat(void)
     		}
                 else if (numbytes > 2){
 			SV_BroadcastPrintf(PRINT_HIGH,"[nano]: %s\n", server_reply);
-			SV_BroadcastPrintf(PRINT_HIGH,"[nano]: %d\n", svs.realtime);
+			//SV_BroadcastPrintf(PRINT_HIGH,"[nano]: %d\n", svs.realtime);
 		}
    		svs.last_check = svs.realtime;
 
