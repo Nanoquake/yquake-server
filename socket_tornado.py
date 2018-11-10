@@ -6,8 +6,14 @@ import tornado.ioloop
 import tornado.iostream
 import tornado.tcpserver
 import time, requests, argparse, random
-import _thread
 from operator import itemgetter
+import settings
+from send_module import send_xrb
+
+from redis import Redis
+from rq import Queue
+
+q = Queue(connection=Redis())
 
 HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
 PORT = 65432        # Port to listen on (non-privileged ports are > 1023)
@@ -23,8 +29,6 @@ args = parser.parse_args()
 raw = 1000000000000000000000000000000.0
 api_key = args.dpow_key
 rai_node_address = 'http://%s:%s' % (args.rai_node_uri, args.rai_node_port)
-source_account = 'xrb_3j8xtnbqyn5rkueosfr7dbf9sth8ta16n3wpd51oogrjmsy4oofagw6jcmmw'
-wallet = 'D5CCCD3280E3184D6C42036551B1C1239841950D58E36479CB7F0572D0243A24'
 frag_limit = 20
 game_time = [-1]
 
@@ -44,7 +48,7 @@ def get_data(json_request):
         return "Error"
 
 def get_frontier(account):
-    json_request = '{"action" : "account_info", "account" : "%s"}' % source_account
+    json_request = '{"action" : "account_info", "account" : "%s"}' % settings.source_account
     r = get_data(json_request)
     if r == "Error":
         return "Error"
@@ -53,7 +57,7 @@ def get_frontier(account):
     return frontier
 
 def get_balance(account):
-    json_request = '{"action" : "account_balance", "account" : "%s"}' % source_account
+    json_request = '{"action" : "account_balance", "account" : "%s"}' % settings.source_account
     r = get_data(json_request)
     if r == "Error":
         return "Error"
@@ -62,7 +66,7 @@ def get_balance(account):
     return balance
 
 def get_account_count(account):
-    json_request = '{"action" : "account_block_count", "account" : "%s"}' % source_account
+    json_request = '{"action" : "account_block_count", "account" : "%s"}' % settings.source_account
     r = get_data(json_request)
     if r == "Error":
         return "Error"
@@ -71,7 +75,7 @@ def get_account_count(account):
     return account_count
 
 def get_account_history(account, count):
-    json_request = '{"action" : "account_history", "account" : "%s", "count" : "%d"}' % (source_account, count)
+    json_request = '{"action" : "account_history", "account" : "%s", "count" : "%d"}' % (settings.source_account, count)
     r = get_data(json_request)
     if r == "Error":
         return "Error"
@@ -81,40 +85,50 @@ def get_account_history(account, count):
 
 def kill_payout(dest_address):
     #We need to calculate how much to give
-    raw_balance = get_balance(source_account)
+    raw_balance = get_balance(settings.source_account)
     amount = int( (int(raw_balance) * 0.75) / (len(paid_in_players) * frag_limit) )
 #    amount = int(1000000000000000000000000000)
     print('{}'.format(amount))
     #Use send xrb function to send
-    _thread.start_new_thread(send_xrb, (dest_address, amount,))
+    #_thread.start_new_thread(send_xrb, (dest_address, amount,))
     #send_xrb(dest_address, amount)
+    result = q.enqueue(send_xrb, dest_address, int(amount), api_key)
 
-def final_payout(dest_address):
+#def final_payout(dest_address):
     #We need to calculate how much to give
-    amount = get_balance(source_account)
-    print('{}'.format(amount))
+#    amount = get_balance(settings.source_account)
+#    print('{}'.format(amount))
     #Use send xrb function to send
-    _thread.start_new_thread(send_xrb, (dest_address, int(amount),))
+    #_thread.start_new_thread(send_xrb, (dest_address, int(amount),))
     #send_xrb(dest_address, int(amount))
+#    result = q.enqueue(send_xrb, dest_address, int(amount), api_key)
 
-def send_xrb(dest_address, amount):
-    hash = get_frontier(source_account)
-    json_request = '{"key" : "%s", "hash" : "%s"}' % (api_key, hash)
-    r = requests.post('http://178.62.11.37:5000/work', data = json_request)
-    resulting_data = r.json()
-    work = resulting_data['work']
-    print(work)
-    json_request = '{"action" : "send", "wallet" : "%s", "source" : "%s", "destination" : "%s", "amount" : "%d", "work" : "%s"}' % (wallet, source_account, dest_address, amount, work)
-    try:
-        r = get_data(json_request)
-        if r == "Error":
-            return "Error"
-        resulting_data = r.json()
-        print(resulting_data)
-        amount_Nano = float(amount) / raw
-        return (resulting_data['block'], (amount_Nano))
-    except:
-        pass
+def get_player_address(client_address):
+    player_address = "xrb_" + client_address
+    print("{} {} {}".format(player_address, len(player_address), player_address[64:]))
+    if len(player_address) > 64:
+        player_address = player_address[:-1]
+    print(player_address)
+    return player_address
+
+#def send_xrb(dest_address, amount):
+#    hash = get_frontier(settings.source_account)
+#    json_request = '{"key" : "%s", "hash" : "%s"}' % (api_key, hash)
+#    r = requests.post('http://178.62.11.37:5000/work', data = json_request)
+#    resulting_data = r.json()
+#    work = resulting_data['work']
+#    print(work)
+#    json_request = '{"action" : "send", "wallet" : "%s", "source" : "%s", "destination" : "%s", "amount" : "%d", "work" : "%s"}' % (wallet, settings.source_account, dest_address, amount, work)
+#    try:
+#        r = get_data(json_request)
+#        if r == "Error":
+#            return "Error"
+#        resulting_data = r.json()
+#        print(resulting_data)
+#        amount_Nano = float(amount) / raw
+#        return (resulting_data['block'], (amount_Nano))
+#    except:
+#        pass
 
 class SimpleTcpClient(object):
     client_id = 0
@@ -142,16 +156,20 @@ class SimpleTcpClient(object):
         try:
             while True:
                 line = yield self.stream.read_until(b'\n')
-                self.log('got |%s|' % line.decode('utf-8').strip())
-                print("{} {}".format(time.strftime("%d/%m/%Y %H:%M:%S"),line))
-                split_data = line.rstrip().decode('utf8').split(",")
+                try:
+                    self.log('got |%s|' % line.decode('utf-8').strip())
+                    print("{} {}".format(time.strftime("%d/%m/%Y %H:%M:%S"),line))
+                    split_data = line.rstrip().decode('utf8').split(",")
+                except:
+                     pass
+
                 if split_data[0] == "selfkill":
                     print("{} killed themselves, no payout".format(split_data[1]))
                 elif split_data[0] == "kill":
                     print("{} killed, payout".format(split_data[1]))
                     #send
-                    dest_address = "xrb_" + split_data[1]
-                    vict_address = "xrb_" + split_data[2]
+                    dest_address = get_player_address(split_data[1])
+                    vict_address = get_player_address(split_data[2])
                     if dest_address in paid_in_players:
                         if not dest_address in scoreboard:
                             scoreboard[dest_address] = 1
@@ -165,7 +183,7 @@ class SimpleTcpClient(object):
 
                 elif split_data[0] == "disconnect":
                     print("{} disconnected".format(split_data[1]))
-                    player_address = "xrb_" + split_data[1]
+                    player_address = get_player_address(split_data[1])
                     json_request = '{"game" : "quake2", "players" : "%d", "action": "disconnect", "player" : {"name" : "%s", "address": "%s"}}' % ((len(game_players)-1), split_data[2], player_address)
                     r = requests.post('https://nanotournament.tk/webhooks/nanotournament', json = json_request)
                     if player_address in game_players:
@@ -177,7 +195,7 @@ class SimpleTcpClient(object):
                     print("{} connected".format(split_data[1]))
                     if game_time[0] == -1:
                         game_time[0] = time.time() + 600
-                    player_address = "xrb_" + split_data[1]
+                    player_address = get_player_address(split_data[1])
                     if player_address not in game_players:
                         game_players.append(player_address)
                         json_request = '{"game" : "quake2", "players" : "%d", "action": "connect", "player" : {"name" : "%s", "address": "%s"}}' % (len(game_players), split_data[2], player_address)
@@ -199,25 +217,27 @@ class SimpleTcpClient(object):
                         if winner == None:
                             winner = key
                             message_list.append("The winner is {}".format(name_address[winner]))
-                            final_payout(winner)
+                            result = q.enqueue(final_payout, winner, api_key)
 
                     #Here if there have been no kills then we should refund the players
                     if winner == None:
                         num_paid_in = len(paid_in_players)
                         if num_paid_in == 1:
-                            amount = get_balance(source_account)
-                            _thread.start_new_thread(send_xrb, (dest_address, int(amount),))
+                            amount = get_balance(settings.source_account)
+                            #_thread.start_new_thread(send_xrb, (dest_address, int(amount),))
+                            result = q.enqueue(send_xrb, paid_in_players[0], int(amount), api_key)
 
                             #send_xrb(paid_in_players[0], int(amount))
                             print('Refund :{}'.format(amount))
                         elif num_paid_in > 1:
                            #We need to calculate how much to give
                             message_list.append("No Winners so refunding players")
-                            amount = int(get_balance(source_account)) / num_paid_in
+                            amount = int(get_balance(settings.source_account)) / num_paid_in
 
                             for players in paid_in_players:
                                 #Use send xrb function to send
-                                _thread.start_new_thread(send_xrb, (dest_address, int(amount),))
+                                #_thread.start_new_thread(send_xrb, (dest_address, int(amount),))
+                                result = q.enqueue(send_xrb, players, int(amount), api_key)
 
                             #    send_xrb(players, int(amount))
                         else:
@@ -238,13 +258,22 @@ class SimpleTcpClient(object):
                     for messages in message_list:
                         return_string += messages
                         return_string += '\n'
-                    return_string += "{} players have paid in".format(len(paid_in_players))
+                    return_string += "Paid in: "
                     for player in paid_in_players:
                         return_string += "{} ".format(name_address[player])
+
+                    not_paid_in = list(set(game_players)-set(paid_in_players))
+                    return_string += "\nNot paid in: "
+                    for player in not_paid_in:
+                        return_string += "{} ".format(name_address[player])
+
 
                     message_list.clear()
                     #print("Return String: {}".format(return_string))
                     yield self.stream.write(return_string.encode('ascii'))
+
+                elif split_data[0] == "new_round":
+                    print("Round start")
 
         except tornado.iostream.StreamClosedError:
             pass
@@ -281,20 +310,22 @@ def check_account():
     print(paid_in_players)
 
     global account_count
-    #print("Update {}".format(time.time()))
-    current_count = get_account_count(source_account)
+    print("Update {}".format(time.time()))
+    current_count = get_account_count(settings.source_account)
     if(int(current_count) > int(account_count)):
         count = int(current_count) - int(account_count)
         print("Count: {}, {},  {}".format(current_count, account_count,  count))
-        complete_history = get_account_history(source_account, count)
+        complete_history = get_account_history(settings.source_account, count)
         for blocks in complete_history:
+            print(blocks)
             if blocks['type'] == 'receive':
                 print(blocks)
                 #0.01
                 if blocks['account'] in game_players and blocks['account'] in paid_in_players:
                     print("Double Pay - return to sender {}".format(blocks['account']))
-                    _thread.start_new_thread(send_xrb, (dest_address, int(amount),))
-
+                    #_thread.start_new_thread(send_xrb, (dest_address, int(amount),))
+                    amount = int(blocks['amount'])
+                    result = q.enqueue(send_xrb, dest_address, int(amount), api_key)
                     #send_xrb(blocks['account'], int(blocks['amount']))
                     message_list.append("{} tried to double pay".format(name_address[blocks['account']]))
 
@@ -303,12 +334,15 @@ def check_account():
                     print("{} has paid in".format(blocks['account']))
                     paid_in_players.append(blocks['account'])
                     message_list.append("{} has paid in".format(blocks['account']))
+                    json_request = '{"game" : "quake2", "player" : "%s", "action": "pay_in", "address" : "%s"}' % (name_address[blocks['account']], blocks['account'])
+                    r = requests.post('https://nanotournament.tk/webhooks/nanotournament', json = json_request)
+
 
         account_count = current_count
 
 def main():
     #ON BOOT WE NEED TO GET FRONTIER
-    starting_frontier = get_frontier(source_account)
+    starting_frontier = get_frontier(settings.source_account)
     print("Starting block is {}, {}".format(starting_frontier, account_count))
 
     # tcp server
@@ -325,6 +359,6 @@ def main():
 
 
 if __name__ == "__main__":
-    account_count = get_account_count(source_account)
+    account_count = get_account_count(settings.source_account)
 
     main()

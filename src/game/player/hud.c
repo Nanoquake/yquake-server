@@ -25,6 +25,7 @@
  */
 
 #include "../header/local.h"
+#include "../header/pysock.h"
 
 void
 MoveClientToIntermission(edict_t *ent)
@@ -91,6 +92,9 @@ BeginIntermission(edict_t *targ)
 	{
 		return; /* already activated */
 	}
+
+        char buffer[] = "new_round,0\n";
+        send(PYSOCKFD , buffer , strlen(buffer) , 0 );
 
 	game.autosaved = false;
 
