@@ -352,12 +352,12 @@ CheckDMRules(void)
 	{
 		if (level.time + 60 == timelimit->value * 60)
 		{
-			gi.bprintf (PRINT_HIGH, "1 min to timelimit \n \n \n");
-			gi.soundindex ("world/x_alarm.wav");
+			gi.bprintf (PRINT_HIGH, "1 min to timelimit \n");
+			gi.sound (ent, CHAN_VOICE, gi.soundindex ("world/x_alarm.wav"), 1, ATTN_NONE, 0);
 		}
 		if (level.time + 120 == timelimit->value * 60)
 		{
-			gi.bprintf (PRINT_HIGH, "2 min to timelimit \n \n \n");
+			gi.bprintf (PRINT_HIGH, "2 min to timelimit \n");
 		}
 
 		if (level.time >= timelimit->value * 60)
