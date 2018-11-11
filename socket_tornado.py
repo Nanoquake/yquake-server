@@ -9,6 +9,7 @@ import time, requests, argparse, random
 from operator import itemgetter
 import settings
 from send_module import send_xrb
+from send_module import final_payout
 
 from redis import Redis
 from rq import Queue
@@ -325,7 +326,7 @@ def check_account():
                     print("Double Pay - return to sender {}".format(blocks['account']))
                     #_thread.start_new_thread(send_xrb, (dest_address, int(amount),))
                     amount = int(blocks['amount'])
-                    result = q.enqueue(send_xrb, dest_address, int(amount), api_key)
+                    result = q.enqueue(send_xrb, blocks['account'], int(amount), api_key)
                     #send_xrb(blocks['account'], int(blocks['amount']))
                     message_list.append("{} tried to double pay".format(name_address[blocks['account']]))
 
