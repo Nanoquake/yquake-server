@@ -10,6 +10,7 @@ from operator import itemgetter
 import settings
 from send_module import send_xrb
 from send_module import final_payout
+from decimal import Decimal
 
 from redis import Redis
 from rq import Queue
@@ -38,6 +39,7 @@ paid_in_players = []
 message_list = []
 name_address = {}
 account_count = 0
+server_balance = 0
 scoreboard = {}
 
 def get_data(json_request):
@@ -87,49 +89,22 @@ def get_account_history(account, count):
 def kill_payout(dest_address):
     #We need to calculate how much to give
     raw_balance = get_balance(settings.source_account)
+    print("Raw {}".format(raw_balance))
     amount = int( (int(raw_balance) * 0.75) / (len(paid_in_players) * frag_limit) )
 #    amount = int(1000000000000000000000000000)
-    print('{}'.format(amount))
+    print('Amount {}'.format(amount))
     #Use send xrb function to send
     #_thread.start_new_thread(send_xrb, (dest_address, amount,))
     #send_xrb(dest_address, amount)
     result = q.enqueue(send_xrb, dest_address, int(amount), api_key)
-
-#def final_payout(dest_address):
-    #We need to calculate how much to give
-#    amount = get_balance(settings.source_account)
-#    print('{}'.format(amount))
-    #Use send xrb function to send
-    #_thread.start_new_thread(send_xrb, (dest_address, int(amount),))
-    #send_xrb(dest_address, int(amount))
-#    result = q.enqueue(send_xrb, dest_address, int(amount), api_key)
-
+    print("kill payout added to queue")
 def get_player_address(client_address):
     player_address = "xrb_" + client_address
-    print("{} {} {}".format(player_address, len(player_address), player_address[64:]))
+#    print("{} {} {}".format(player_address, len(player_address), player_address[64:]))
     if len(player_address) > 64:
         player_address = player_address[:-1]
-    print(player_address)
+ #   print(player_address)
     return player_address
-
-#def send_xrb(dest_address, amount):
-#    hash = get_frontier(settings.source_account)
-#    json_request = '{"key" : "%s", "hash" : "%s"}' % (api_key, hash)
-#    r = requests.post('http://178.62.11.37:5000/work', data = json_request)
-#    resulting_data = r.json()
-#    work = resulting_data['work']
-#    print(work)
-#    json_request = '{"action" : "send", "wallet" : "%s", "source" : "%s", "destination" : "%s", "amount" : "%d", "work" : "%s"}' % (wallet, settings.source_account, dest_address, amount, work)
-#    try:
-#        r = get_data(json_request)
-#        if r == "Error":
-#            return "Error"
-#        resulting_data = r.json()
-#        print(resulting_data)
-#        amount_Nano = float(amount) / raw
-#        return (resulting_data['block'], (amount_Nano))
-#    except:
-#        pass
 
 class SimpleTcpClient(object):
     client_id = 0
@@ -168,25 +143,28 @@ class SimpleTcpClient(object):
                     print("{} killed themselves, no payout".format(split_data[1]))
                 elif split_data[0] == "kill":
                     print("{} killed, payout".format(split_data[1]))
-                    #send
-                    dest_address = get_player_address(split_data[1])
-                    vict_address = get_player_address(split_data[2])
-                    if dest_address in paid_in_players:
-                        if not dest_address in scoreboard:
-                            scoreboard[dest_address] = 1
-                        else:
-                            scoreboard[dest_address] += 1
-
-                        kill_payout(dest_address)
-                        print("Sent to {}".format(dest_address))
-                    json_request = '{"game" : "quake2", "action": "kill", "attacker": {"name" : "%s", "address" : "%s"}, "victim": {"name" : "%s", "address" : "%s"}}' % (split_data[3], dest_address, split_data[4], vict_address)
-                    r = requests.post('https://nanotournament.tk/webhooks/nanotournament', json = json_request)
+                    if split_data[1] == 'noaddress':
+                        print("Error - noaddress kill - igonored")
+                    else:
+                        #send
+                        dest_address = get_player_address(split_data[1])
+                        vict_address = get_player_address(split_data[2])
+                        if dest_address in paid_in_players:
+                            if not dest_address in scoreboard:
+                                scoreboard[dest_address] = 1
+                            else:
+                                scoreboard[dest_address] += 1
+                            print("kill 1")
+                            kill_payout(dest_address)
+                            print("Sent to {}".format(dest_address))
+                        json_request = '{"game" : "quake2", "action": "kill", "attacker": {"name" : "%s", "address" : "%s"}, "victim": {"name" : "%s", "address" : "%s"}}' % (split_data[3], dest_address, split_data[4], vict_address)
+                        #r = requests.post('https://nanotournament.tk/webhooks/nanotournament', json = json_request)
 
                 elif split_data[0] == "disconnect":
                     print("{} disconnected".format(split_data[1]))
                     player_address = get_player_address(split_data[1])
                     json_request = '{"game" : "quake2", "players" : "%d", "action": "disconnect", "player" : {"name" : "%s", "address": "%s"}}' % ((len(game_players)-1), split_data[2], player_address)
-                    r = requests.post('https://nanotournament.tk/webhooks/nanotournament', json = json_request)
+                    #r = requests.post('https://nanotournament.tk/webhooks/nanotournament', json = json_request)
                     if player_address in game_players:
                         game_players.remove(player_address)
                     if player_address in paid_in_players:
@@ -201,24 +179,33 @@ class SimpleTcpClient(object):
                         game_players.append(player_address)
                         json_request = '{"game" : "quake2", "players" : "%d", "action": "connect", "player" : {"name" : "%s", "address": "%s"}}' % (len(game_players), split_data[2], player_address)
                         print(json_request)
-                        r = requests.post('https://nanotournament.tk/webhooks/nanotournament', json = json_request)
+                        #r = requests.post('https://nanotournament.tk/webhooks/nanotournament', json = json_request)
 #                       print(r.text)
                         name_address[player_address] = split_data[2]
 
                 elif split_data[0] == "roundend":
                     print("{} round ended".format(split_data[1]))
                     json_request = '{"game" : "quake2", "players" : "%d", "action": "round_end"}' % (len(game_players))
-                    r = requests.post('https://nanotournament.tk/webhooks/nanotournament', json = json_request)
+                    #r = requests.post('https://nanotournament.tk/webhooks/nanotournament', json = json_request)
                     #Decide winner and payout TODO
                     winner = None
+                    secondPlace = None
+                    thirdPlace = None
                     print(scoreboard)
 #                    for key, value in sorted(scoreboard.iteritems(), key=lambda (k,v): (v,k)):
                     for key, value in sorted(scoreboard.items(), key = itemgetter(1), reverse = True):
                         print("{}: {}".format(key, value))
                         if winner == None:
                             winner = key
-                            message_list.append("The winner is {}".format(name_address[winner]))
-                            result = q.enqueue(final_payout, winner, api_key)
+                            message_list.append("1st place is {}".format(name_address[winner]))
+                        elif secondPlace == None:
+                            secondPlace = key
+                            message_list.append("\n2nd place is {}".format(name_address[secondPlace]))
+                        elif thirdPlace == None:
+                            thirdPlace = key
+                            message_list.append("\n3nd place is {}".format(name_address[thirdPlace]))
+
+                    result = q.enqueue(final_payout, winner, secondPlace, thirdPlace, api_key)
 
                     #Here if there have been no kills then we should refund the players
                     if winner == None:
@@ -226,7 +213,7 @@ class SimpleTcpClient(object):
                         if num_paid_in == 1:
                             amount = get_balance(settings.source_account)
                             #_thread.start_new_thread(send_xrb, (dest_address, int(amount),))
-                            result = q.enqueue(send_xrb, paid_in_players[0], int(amount), api_key)
+                            q.enqueue(send_xrb, paid_in_players[0], int(amount), api_key)
 
                             #send_xrb(paid_in_players[0], int(amount))
                             print('Refund :{}'.format(amount))
@@ -254,6 +241,7 @@ class SimpleTcpClient(object):
 
 
                 elif split_data[0] == "poll":
+                    global server_balance
                     return_string = " "
                     #print(message_list)
                     for messages in message_list:
@@ -268,9 +256,10 @@ class SimpleTcpClient(object):
                     for player in not_paid_in:
                         return_string += "{} ".format(name_address[player])
 
-
+                    print(server_balance)
+                    return_string += "   Server Balance: {:.3} Nano".format(Decimal(server_balance))
                     message_list.clear()
-                    #print("Return String: {}".format(return_string))
+                    print("Return String: {}".format(return_string))
                     yield self.stream.write(return_string.encode('ascii'))
 
                 elif split_data[0] == "new_round":
@@ -311,6 +300,7 @@ def check_account():
     print(paid_in_players)
 
     global account_count
+    global server_balance
     print("Update {}".format(time.time()))
     current_count = get_account_count(settings.source_account)
     if(int(current_count) > int(account_count)):
@@ -336,10 +326,11 @@ def check_account():
                     paid_in_players.append(blocks['account'])
                     message_list.append("{} has paid in".format(blocks['account']))
                     json_request = '{"game" : "quake2", "player" : "%s", "action": "pay_in", "address" : "%s"}' % (name_address[blocks['account']], blocks['account'])
-                    r = requests.post('https://nanotournament.tk/webhooks/nanotournament', json = json_request)
-
+                    #r = requests.post('https://nanotournament.tk/webhooks/nanotournament', json = json_request)
 
         account_count = current_count
+    server_balance = Decimal(get_balance(settings.source_account)) / Decimal(raw)
+
 
 def main():
     #ON BOOT WE NEED TO GET FRONTIER
@@ -357,7 +348,6 @@ def main():
 
     # infinite loop
     tornado.ioloop.IOLoop.instance().start()
-
 
 if __name__ == "__main__":
     account_count = get_account_count(settings.source_account)
