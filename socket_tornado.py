@@ -191,6 +191,7 @@ class SimpleTcpClient(object):
                     winner = None
                     secondPlace = None
                     thirdPlace = None
+                    jointFirst = None
                     print(scoreboard)
 #                    for key, value in sorted(scoreboard.iteritems(), key=lambda (k,v): (v,k)):
                     for key, value in sorted(scoreboard.items(), key = itemgetter(1), reverse = True):
@@ -200,12 +201,16 @@ class SimpleTcpClient(object):
                             message_list.append("1st place is {}".format(name_address[winner]))
                         elif secondPlace == None:
                             secondPlace = key
-                            message_list.append("\n2nd place is {}".format(name_address[secondPlace]))
+                            if value == scoreboard[winner]:
+                                jointFirst = key
+                                message_list.append("\nJoint 1st place is {}".format(name_address[secondPlace]))
+                            else:
+                                message_list.append("\n2nd place is {}".format(name_address[secondPlace]))
                         elif thirdPlace == None:
                             thirdPlace = key
                             message_list.append("\n3nd place is {}".format(name_address[thirdPlace]))
 
-                    result = q.enqueue(final_payout, winner, secondPlace, thirdPlace, api_key)
+                    result = q.enqueue(final_payout, winner, secondPlace, thirdPlace, jointFirst,  api_key)
 
                     #Here if there have been no kills then we should refund the players
                     if winner == None:
@@ -259,7 +264,7 @@ class SimpleTcpClient(object):
                     print(server_balance)
                     return_string += "   Server Balance: {:.3} Nano".format(Decimal(server_balance))
                     message_list.clear()
-                    print("Return String: {}".format(return_string))
+                    print("Return String: {} {}".format(return_string, len(return_string)))
                     yield self.stream.write(return_string.encode('ascii'))
 
                 elif split_data[0] == "new_round":
