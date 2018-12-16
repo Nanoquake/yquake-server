@@ -1,5 +1,12 @@
 import requests, settings
 
+def send_discord(json_request):
+    try:
+        r = requests.post('https://nanotournament.tk/webhooks/nanotournament', json = json_request, timeout = 3)
+        print(r)
+    except:
+        print("Error discord")
+
 def get_data(json_request):
     try:
         r = requests.post(settings.rai_node_address, data = json_request)
@@ -9,7 +16,7 @@ def get_data(json_request):
         return "Error"
 
 def get_balance(account):
-    json_request = '{"action" : "account_balance", "account" : "%s"}' % settings.source_account
+    json_request = '{"action" : "account_balance", "account" : "%s"}' % account
     r = get_data(json_request)
     if r == "Error":
         return "Error"
@@ -64,6 +71,41 @@ def send_xrb(dest_address, amount, api_key):
             print(work)
 
             json_request = '{"action" : "send", "wallet" : "%s", "source" : "%s", "destination" : "%s", "amount" : "%d", "work" : "%s"}' % (settings.wallet, settings.source_account, dest_address, amount, work)
+            try:
+                r = get_data(json_request)
+                if r == "Error":
+                    return "Error"
+                resulting_data = r.json()
+                print(resulting_data)
+                if 'block' in resulting_data:
+                    print("Found Block")
+                    x = 5
+                    return (resulting_data['block'])
+            except:
+                pass
+
+        x = x + 1
+
+def send_faucet(dest_address, amount, api_key):
+    x = 0
+    while x < 4:
+        #Find previous hash to allow for work to be generated
+        json_request = '{"action" : "account_info", "account" : "%s"}' % settings.faucet_account
+        r = get_data(json_request)
+        if r == "Error":
+            return "Error"
+        resulting_data = r.json()
+        hash = resulting_data['frontier']
+
+        #Generate work
+        json_request = '{"key" : "%s", "hash" : "%s"}' % (api_key, hash)
+        r = requests.post('http://178.62.11.37:5000/work', data = json_request)
+        resulting_data = r.json()
+        if 'work' in resulting_data:
+            work = resulting_data['work']
+            print(work)
+
+            json_request = '{"action" : "send", "wallet" : "%s", "source" : "%s", "destination" : "%s", "amount" : "%d", "work" : "%s"}' % (settings.wallet, settings.faucet_account, dest_address, amount, work)
             try:
                 r = get_data(json_request)
                 if r == "Error":
