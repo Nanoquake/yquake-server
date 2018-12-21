@@ -2,7 +2,8 @@ import requests, settings
 
 def send_discord(json_request):
     try:
-        r = requests.post('https://nanotournament.tk/webhooks/nanotournament', json = json_request, timeout = 3)
+        leaderboard_address = 'https://nanotournament.tk/webhooks/nanotournament/{}'.format(settings.server_name)
+        r = requests.post(leaderboard_address, json = json_request, timeout = 3)
         print(r)
     except:
         print("Error discord")
