@@ -14,6 +14,6 @@ struct sockaddr_in address;
 int pysock;
 struct sockaddr_in serv_addr;
 
-#define PYSOCKFD 8
+#define PYSOCKFD 7
 
 //#endif
