@@ -5,7 +5,8 @@ import tornado.gen
 import tornado.ioloop
 import tornado.iostream
 import tornado.tcpserver
-import time, requests, argparse, random
+import tornado.web
+import time, requests, argparse, random, json
 from operator import itemgetter
 import settings
 from send_module import send_xrb
@@ -322,41 +323,43 @@ class SimpleTcpServer(tornado.tcpserver.TCPServer):
 
 @tornado.gen.coroutine
 def check_account():
-    print(game_players)
-    print(paid_in_players)
-
-    global account_count
     global server_balance
-    print("Update {}".format(time.time()))
-    current_count = get_account_count(settings.source_account)
-    if(int(current_count) > int(account_count)):
-        count = int(current_count) - int(account_count)
-        print("Count: {}, {},  {}".format(current_count, account_count,  count))
-        complete_history = get_account_history(settings.source_account, count)
-        for blocks in complete_history:
-            print(blocks)
-            if blocks['type'] == 'receive':
-                print(blocks)
-                #0.01
-                if blocks['account'] in game_players and blocks['account'] in paid_in_players:
-                    print("Double Pay - return to sender {}".format(blocks['account']))
-                    #_thread.start_new_thread(send_xrb, (dest_address, int(amount),))
-                    amount = int(blocks['amount'])
-                    result = q.enqueue(send_xrb, blocks['account'], int(amount), api_key)
-                    #send_xrb(blocks['account'], int(blocks['amount']))
-                    message_list.append("{} tried to double pay".format(name_address[blocks['account']]))
 
-
-                elif blocks['account'] in game_players and int(blocks['amount']) >= 10000000000000000000000000000 and blocks['account'] not in paid_in_players:
-                    print("{} has paid in".format(blocks['account']))
-                    paid_in_players.append(blocks['account'])
-                    message_list.append("{} has paid in".format(blocks['account']))
-                    json_request = '{"game" : "quake2", "player" : "%s", "action": "pay_in", "address" : "%s"}' % (name_address[blocks['account']], blocks['account'])
-                    send_discord(json_request)
-
-        account_count = current_count
     server_balance = Decimal(get_balance(settings.source_account)) / Decimal(raw)
 
+class Data_Callback(tornado.web.RequestHandler):
+    @tornado.gen.coroutine
+    def post(self):
+        global server_balance
+
+        receive_time = time.strftime("%d/%m/%Y %H:%M:%S")
+        post_data = json.loads(self.request.body.decode('utf-8'))
+        block_data = json.loads(post_data['block'])
+        if block_data['account'] == settings.source_account:
+            print("{}: {}".format(receive_time, post_data))
+            complete_history = get_account_history(settings.source_account, 1)
+            for blocks in complete_history:
+                print(blocks)
+                if blocks['type'] == 'receive':
+                    print(blocks)
+                #0.01
+                    if blocks['account'] in game_players and blocks['account'] in paid_in_players:
+                        print("Double Pay - return to sender {}".format(blocks['account']))
+                        #_thread.start_new_thread(send_xrb, (dest_address, int(amount),))
+                        amount = int(blocks['amount'])
+                        result = q.enqueue(send_xrb, blocks['account'], int(amount), api_key)
+                        #send_xrb(blocks['account'], int(blocks['amount']))
+                        message_list.append("{} tried to double pay".format(name_address[blocks['account']]))
+
+
+                    elif blocks['account'] in game_players and int(blocks['amount']) >= 10000000000000000000000000000 and blocks['account'] not in paid_in_players:
+                        print("{} has paid in".format(blocks['account']))
+                        paid_in_players.append(blocks['account'])
+                        message_list.append("{} has paid in".format(blocks['account']))
+                        json_request = '{"game" : "quake2", "player" : "%s", "action": "pay_in", "address" : "%s"}' % (name_address[blocks['account']], blocks['account'])
+                        send_discord(json_request)
+
+            server_balance = Decimal(get_balance(settings.source_account)) / Decimal(raw)
 
 def main():
     #ON BOOT WE NEED TO GET FRONTIER
@@ -368,12 +371,18 @@ def main():
     server.listen(PORT, HOST)
     print("Listening on %s:%d..." % (HOST, PORT))
 
+    # callback server
+    application.listen(7090)
     #
     pc = tornado.ioloop.PeriodicCallback(check_account, 2500)
     pc.start()
 
     # infinite loop
     tornado.ioloop.IOLoop.instance().start()
+
+application = tornado.web.Application([
+    (r"/callback/", Data_Callback),
+])
 
 if __name__ == "__main__":
     account_count = get_account_count(settings.source_account)
