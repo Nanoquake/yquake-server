@@ -28,7 +28,7 @@
 #include "../game/header/pysock.h"
 
 #define HEARTBEAT_SECONDS 300
-#define CHECK_SECONDS 10
+#define CHECK_SECONDS 4
 
 netadr_t master_adr[MAX_MASTERS]; /* address of group servers */
 
@@ -481,7 +481,7 @@ Master_Heartbeat(void)
         		return;
     		}
                 else if (numbytes > 2){
-			SV_BroadcastPrintf(PRINT_HIGH,"[nano]: %s\n", server_reply);
+			SV_BroadcastPrintf(PRINT_HIGH,"%s\n", server_reply);
 			//SV_BroadcastPrintf(PRINT_HIGH,"[nano]: %d\n", svs.realtime);
 		}
    		svs.last_check = svs.realtime;

@@ -25,9 +25,9 @@ def get_balance(account):
     balance = resulting_data['balance']
     return balance
 
-def final_payout(firstPlace, secondPlace, thirdPlace, jointFirst, api_key):
+def final_payout(firstPlace, secondPlace, thirdPlace, jointFirst, current_balance, api_key):
     #We need to calculate how much to give
-    amount = get_balance(settings.source_account)
+    amount = current_balance
     print('{}'.format(amount))
 
     if thirdPlace != None:

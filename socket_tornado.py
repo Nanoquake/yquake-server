@@ -38,6 +38,7 @@ frag_limit = 20
 game_time = [-1]
 
 game_players = []
+hash_list = []
 paid_in_players = []
 message_list = []
 name_address = {}
@@ -72,6 +73,16 @@ def get_balance(account):
     balance = resulting_data['balance']
     return balance
 
+def get_link(hash):
+    json_request = '{"action" : "block", "hash" : "%s"}' % hash
+    r = get_data(json_request)
+    if r == "Error":
+        return "Error"
+    resulting_data = r.json()
+    block_contents = json.loads(resulting_data['contents'])
+    link = block_contents['link']
+    return link
+
 def get_account_count(account):
     json_request = '{"action" : "account_block_count", "account" : "%s"}' % account
     r = get_data(json_request)
@@ -95,19 +106,15 @@ def kill_payout(dest_address):
     raw_balance = get_balance(settings.source_account)
     print("Raw {}".format(raw_balance))
     amount = int( (int(raw_balance) * 0.75) / (len(paid_in_players) * frag_limit) )
-#    amount = int(1000000000000000000000000000)
     print('Amount {}'.format(amount))
     #Use send xrb function to send
-    #_thread.start_new_thread(send_xrb, (dest_address, amount,))
-    #send_xrb(dest_address, amount)
     result = q.enqueue(send_xrb, dest_address, int(amount), api_key)
     print("kill payout added to queue")
+
 def get_player_address(client_address):
     player_address = "xrb_" + client_address
-#    print("{} {} {}".format(player_address, len(player_address), player_address[64:]))
     if len(player_address) > 64:
         player_address = player_address[:-1]
- #   print(player_address)
     return player_address
 
 class SimpleTcpClient(object):
@@ -220,8 +227,8 @@ class SimpleTcpClient(object):
                         elif thirdPlace == None:
                             thirdPlace = key
                             message_list.append("\n3nd place is {}".format(name_address[thirdPlace]))
-
-                    result = q.enqueue(final_payout, winner, secondPlace, thirdPlace, jointFirst,  api_key)
+                    current_balance = get_balance(settings.source_account)
+                    result = q.enqueue(final_payout, winner, secondPlace, thirdPlace, jointFirst, current_balance, api_key)
 
                     #Here if there have been no kills then we should refund the players
                     if winner == None:
@@ -263,6 +270,7 @@ class SimpleTcpClient(object):
                     overall_score_board.clear()
                     scoreboard.clear()
                     game_players.clear()
+                    hash_list.clear()
                     paid_in_players.clear()
                     name_address.clear()
 
@@ -274,14 +282,18 @@ class SimpleTcpClient(object):
                     for messages in message_list:
                         return_string += messages
                         return_string += '\n'
-                    return_string += "Paid in: "
-                    for player in paid_in_players:
-                        return_string += "{} ".format(name_address[player])
+
+                    # Check if we have any paid in players, if so include in regular messages
+                    if len(paid_in_players) > 0:
+                        return_string += "Paid in: "
+                        for player in paid_in_players:
+                            return_string += "{} ".format(name_address[player])
 
                     not_paid_in = list(set(game_players)-set(paid_in_players))
-                    return_string += "\nNot paid in: "
-                    for player in not_paid_in:
-                        return_string += "{} ".format(name_address[player])
+                    if len(not_paid_in) > 0:
+                        return_string += "\nNot paid in: "
+                        for player in not_paid_in:
+                            return_string += "{} ".format(name_address[player])
 
                     print(server_balance)
                     return_string += "   Server Balance: {:.3} Nano".format(Decimal(server_balance))
@@ -323,8 +335,48 @@ class SimpleTcpServer(tornado.tcpserver.TCPServer):
 
 @tornado.gen.coroutine
 def check_account():
+    global account_count
     global server_balance
 
+    current_count = get_account_count(settings.source_account)
+    if(int(current_count) > int(account_count)):
+        count = int(current_count) - int(account_count)
+        complete_history = get_account_history(settings.source_account, count)
+        for blocks in complete_history:
+            if blocks['type'] == 'receive':
+                # Here we check whether we've seen either the send hash or the receive hash before (perhaps in a previous callback, if so we don't process it again
+                # In Nano State blocks the original send hash is 'link' in the receive block
+                link = get_link(blocks['hash'])
+                if blocks['hash'] in hash_list or link in hash_list:
+                    print("Block already seen")
+                    if blocks['hash'] not in hash_list:
+                        hash_list.append(blocks['hash'])
+                    if link not in hash_list:
+                        hash_list.append(link)
+
+                else:
+                    if blocks['hash'] not in hash_list:
+                        hash_list.append(blocks['hash'])
+                    if link not in hash_list:
+                        hash_list.append(link)
+
+                    print(hash_list)
+                    # Check for whether player is double paying 
+                    if blocks['account'] in game_players and blocks['account'] in paid_in_players:
+                        print("Double Pay - return to sender {}".format(blocks['account']))
+                        amount = int(blocks['amount'])
+                        result = q.enqueue(send_xrb, blocks['account'], int(amount), api_key)
+                        message_list.append("{} tried to double pay".format(name_address[blocks['account']]))
+
+                    elif blocks['account'] in game_players and int(blocks['amount']) >= 10000000000000000000000000000 and blocks['account'] not in paid_in_players:
+                        print("{} has paid in".format(blocks['account']))
+                        paid_in_players.append(blocks['account'])
+                        message_list.append("{} has paid in".format(blocks['account']))
+                        json_request = '{"game" : "quake2", "player" : "%s", "action": "pay_in", "address" : "%s"}' % (name_address[blocks['account']], blocks['account'])
+                        send_discord(json_request)
+
+
+    account_count = current_count
     server_balance = Decimal(get_balance(settings.source_account)) / Decimal(raw)
 
 class Data_Callback(tornado.web.RequestHandler):
@@ -335,30 +387,28 @@ class Data_Callback(tornado.web.RequestHandler):
         receive_time = time.strftime("%d/%m/%Y %H:%M:%S")
         post_data = json.loads(self.request.body.decode('utf-8'))
         block_data = json.loads(post_data['block'])
-        if block_data['account'] == settings.source_account:
-            print("{}: {}".format(receive_time, post_data))
-            complete_history = get_account_history(settings.source_account, 1)
-            for blocks in complete_history:
-                print(blocks)
-                if blocks['type'] == 'receive':
-                    print(blocks)
+        if block_data['link_as_account'] == settings.source_account:
+#        if block_data['account'] == settings.source_account:
+            print("{}: {}".format(receive_time, block_data))
+            if post_data['hash'] not in hash_list:
+                hash_list.append(post_data['hash'])
                 #0.01
-                    if blocks['account'] in game_players and blocks['account'] in paid_in_players:
-                        print("Double Pay - return to sender {}".format(blocks['account']))
-                        #_thread.start_new_thread(send_xrb, (dest_address, int(amount),))
-                        amount = int(blocks['amount'])
-                        result = q.enqueue(send_xrb, blocks['account'], int(amount), api_key)
-                        #send_xrb(blocks['account'], int(blocks['amount']))
-                        message_list.append("{} tried to double pay".format(name_address[blocks['account']]))
+                if block_data['account'] in game_players and block_data['account'] in paid_in_players:
+                    print("Double Pay - return to sender {}".format(block_data['account']))
+                    amount = int(post_data['amount'])
+                    result = q.enqueue(send_xrb, block_data['account'], int(amount), api_key)
+                    message_list.append("{} tried to double pay".format(name_address[block_data['account']]))
 
 
-                    elif blocks['account'] in game_players and int(blocks['amount']) >= 10000000000000000000000000000 and blocks['account'] not in paid_in_players:
-                        print("{} has paid in".format(blocks['account']))
-                        paid_in_players.append(blocks['account'])
-                        message_list.append("{} has paid in".format(blocks['account']))
-                        json_request = '{"game" : "quake2", "player" : "%s", "action": "pay_in", "address" : "%s"}' % (name_address[blocks['account']], blocks['account'])
-                        send_discord(json_request)
+                elif block_data['account'] in game_players and int(post_data['amount']) >= 10000000000000000000000000000 and block_data['account'] not in paid_in_players:
+                   print("{} has paid in".format(block_data['account']))
+                   paid_in_players.append(block_data['account'])
+                   message_list.append("{} has paid in".format(block_data['account']))
+                   json_request = '{"game" : "quake2", "player" : "%s", "action": "pay_in", "address" : "%s"}' % (name_address[block_data['account']], block_data['account'])
+                   send_discord(json_request)
 
+            else:
+                print("Block already seen")
             server_balance = Decimal(get_balance(settings.source_account)) / Decimal(raw)
 
 def main():
