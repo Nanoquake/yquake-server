@@ -350,9 +350,6 @@ Sys_GetGameAPI(void *parms)
 	const char *gamename = "game.so";
 #endif
 
-	setreuid(getuid(), getuid());
-	setegid(getgid());
-
 	if (game_library)
 	{
 		Com_Error(ERR_FATAL, "Sys_GetGameAPI without Sys_UnloadingGame");
@@ -482,6 +479,18 @@ Sys_GetHomeDir(void)
 	snprintf(gdir, sizeof(gdir), "%s/%s/", home, CFGDIR);
 
 	return gdir;
+}
+
+void
+Sys_Remove(const char *path)
+{
+	remove(path);
+}
+
+int
+Sys_Rename(const char *from, const char *to)
+{
+	return rename(from, to);
 }
 
 /* ================================================================ */

@@ -51,6 +51,8 @@ cvar_t *maxclients; /* rename sv_maxclients */
 cvar_t *sv_showclamp;
 cvar_t *hostname;
 cvar_t *public_server; /* should heartbeats be sent */
+cvar_t *sv_entfile; /* External entity files. */
+cvar_t *sv_downloadserver; /* Download server. */
 
 void Master_Shutdown(void);
 void SV_ConnectionlessPacket(void);
@@ -637,12 +639,15 @@ SV_Init(void)
 	allow_download_models = Cvar_Get("allow_download_models", "1", CVAR_ARCHIVE);
 	allow_download_sounds = Cvar_Get("allow_download_sounds", "1", CVAR_ARCHIVE);
 	allow_download_maps = Cvar_Get("allow_download_maps", "1", CVAR_ARCHIVE);
+	sv_downloadserver = Cvar_Get ("sv_downloadserver", "", 0);
 
 	sv_noreload = Cvar_Get("sv_noreload", "0", 0);
 
 	sv_airaccelerate = Cvar_Get("sv_airaccelerate", "0", CVAR_LATCH);
 
 	public_server = Cvar_Get("public", "0", 0);
+
+	sv_entfile = Cvar_Get("sv_entfile", "1", CVAR_ARCHIVE);
 
 	SZ_Init(&net_message, net_message_buffer, sizeof(net_message_buffer));
 }

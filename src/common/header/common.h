@@ -676,6 +676,8 @@ void FS_BuildGameSpecificSearchPath(char *dir);
 char *FS_Gamedir(void);
 char *FS_NextPath(char *prevpath);
 int FS_LoadFile(char *path, void **buffer);
+qboolean FS_FileInGamedir(const char *file);
+qboolean FS_AddPAKFromGamedir(const char *pak);
 const char* FS_GetNextRawPath(const char* lastRawPath);
 
 /* a null buffer will just return the file length without loading */
@@ -719,6 +721,9 @@ extern cvar_t *modder;
 extern cvar_t *dedicated;
 extern cvar_t *host_speeds;
 extern cvar_t *log_stats;
+
+/* External entity files. */
+extern cvar_t *sv_entfile;
 
 /* Hack for portable client */
 extern qboolean is_portable;
@@ -778,6 +783,8 @@ void Sys_Error(char *error, ...);
 void Sys_Quit(void);
 void Sys_Init(void);
 char *Sys_GetHomeDir(void);
+void Sys_Remove(const char *path);
+int Sys_Rename(const char *from, const char *to);
 long long Sys_Microseconds(void);
 void Sys_Nanosleep(int);
 void *Sys_GetProcAddress(void *handle, const char *sym);
