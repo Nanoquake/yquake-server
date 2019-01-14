@@ -46,6 +46,7 @@ account_count = 0
 server_balance = 0
 scoreboard = {}
 overall_score_board = {}
+theory_balance = 0
 
 def get_data(json_request):
     try:
@@ -104,6 +105,10 @@ def get_account_history(account, count):
 def kill_payout(dest_address):
     #We need to calculate how much to give
     raw_balance = get_balance(settings.source_account)
+    if int(raw_balance) == 0:
+        print("Error - difference between theory and actual balances")
+        global theory_balance
+        raw_balance = int(float(theory_balance) * float(raw))
     print("Raw {}".format(raw_balance))
     amount = int( (int(raw_balance) * 0.75) / (len(paid_in_players) * frag_limit) )
     print('Amount {}'.format(amount))
@@ -273,6 +278,8 @@ class SimpleTcpClient(object):
                     hash_list.clear()
                     paid_in_players.clear()
                     name_address.clear()
+                    global theory_balance
+                    theory_balance = 0
 
 
                 elif split_data[0] == "poll":
@@ -337,6 +344,7 @@ class SimpleTcpServer(tornado.tcpserver.TCPServer):
 def check_account():
     global account_count
     global server_balance
+    global theory_balance
 
     current_count = get_account_count(settings.source_account)
     if(int(current_count) > int(account_count)):
@@ -372,6 +380,7 @@ def check_account():
                         print("{} has paid in".format(blocks['account']))
                         paid_in_players.append(blocks['account'])
                         message_list.append("{} has paid in".format(blocks['account']))
+                        theory_balance += 0.1
                         json_request = '{"game" : "quake2", "player" : "%s", "action": "pay_in", "address" : "%s"}' % (name_address[blocks['account']], blocks['account'])
                         send_discord(json_request)
 
@@ -383,7 +392,7 @@ class Data_Callback(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def post(self):
         global server_balance
-
+        global theory_balance
         receive_time = time.strftime("%d/%m/%Y %H:%M:%S")
         post_data = json.loads(self.request.body.decode('utf-8'))
         block_data = json.loads(post_data['block'])
@@ -404,6 +413,7 @@ class Data_Callback(tornado.web.RequestHandler):
                    print("{} has paid in".format(block_data['account']))
                    paid_in_players.append(block_data['account'])
                    message_list.append("{} has paid in".format(block_data['account']))
+                   theory_balance += 0.1
                    json_request = '{"game" : "quake2", "player" : "%s", "action": "pay_in", "address" : "%s"}' % (name_address[block_data['account']], block_data['account'])
                    send_discord(json_request)
 

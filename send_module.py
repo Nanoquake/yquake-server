@@ -1,4 +1,4 @@
-import requests, settings
+import requests, settings, time
 
 def send_discord(json_request):
     try:
@@ -53,6 +53,10 @@ def final_payout(firstPlace, secondPlace, thirdPlace, jointFirst, current_balanc
             send_xrb(firstPlace, int(firstAmount), api_key)
 
 def send_xrb(dest_address, amount, api_key):
+    while int(get_balance(settings.source_account)) == 0:
+        print("Error empty balance")
+        time.sleep(2)
+
     x = 0
     while x < 4:
         #Find previous hash to allow for work to be generated
