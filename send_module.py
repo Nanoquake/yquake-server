@@ -26,7 +26,7 @@ def get_balance(account):
     balance = resulting_data['balance']
     return balance
 
-def search_pending(account, api_key):
+def search_pending(account, index_pos, api_key):
     pending = nano.get_pending(str(account))
     print("Pending: {}".format(pending))
 
@@ -38,9 +38,9 @@ def search_pending(account, api_key):
         try:
             if len(previous) == 0:
                 print("Opening Account")
-                hash, balance = nano.open_xrb(int(settings.index), account, settings.wallet_seed, api_key)
+                hash, balance = nano.open_xrb(int(index_pos), account, settings.wallet_seed, api_key)
             else:
-                hash, balance = nano.receive_xrb(int(settings.index), account, settings.wallet_seed, api_key)
+                hash, balance = nano.receive_xrb(int(index_pos), account, settings.wallet_seed, api_key)
 
         except:
             print("Error processing blocks")
@@ -124,34 +124,10 @@ def send_xrb(dest_address, amount, api_key):
 def send_faucet(dest_address, amount, api_key):
     x = 0
     while x < 4:
-        #Find previous hash to allow for work to be generated
-        json_request = '{"action" : "account_info", "account" : "%s"}' % settings.faucet_account
-        r = get_data(json_request)
-        if r == "Error":
-            return "Error"
-        resulting_data = r.json()
-        hash = resulting_data['frontier']
 
-        #Generate work
-        json_request = '{"key" : "%s", "hash" : "%s"}' % (api_key, hash)
-        r = requests.post('http://178.62.11.37:5000/work', data = json_request)
-        resulting_data = r.json()
-        if 'work' in resulting_data:
-            work = resulting_data['work']
-            print(work)
-
-            json_request = '{"action" : "send", "wallet" : "%s", "source" : "%s", "destination" : "%s", "amount" : "%d", "work" : "%s"}' % (settings.wallet, settings.faucet_account, dest_address, amount, work)
-            try:
-                r = get_data(json_request)
-                if r == "Error":
-                    return "Error"
-                resulting_data = r.json()
-                print(resulting_data)
-                if 'block' in resulting_data:
-                    print("Found Block")
-                    x = 5
-                    return (resulting_data['block'])
-            except:
-                pass
+        return_block = nano.send_xrb(dest_address, amount, settings.faucet_account, 1, settings.wallet_seed, api_key)
+        print("Return Block: {}".format(return_block))
+        if 'hash' in return_block:
+            x = 5
 
         x = x + 1

@@ -347,7 +347,7 @@ def check_account():
     global account_count
     global server_balance
 
-    result = q.enqueue(search_pending, settings.source_account, api_key)
+    result = q.enqueue(search_pending, settings.source_account, 0, api_key)
     current_count = get_account_count(settings.source_account)
     if(int(current_count) > int(account_count)):
         count = int(current_count) - int(account_count)
@@ -392,7 +392,7 @@ def check_account():
 @tornado.gen.coroutine
 def check_faucet():
     #Periodically check the faucet account for new blocks
-    result = q.enqueue(search_pending, settings.faucet_account, api_key)
+    result = q.enqueue(search_pending, settings.faucet_account, 1, api_key)
 
 class Data_Callback(tornado.web.RequestHandler):
     @tornado.gen.coroutine
