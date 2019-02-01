@@ -13,6 +13,8 @@ from send_module import send_xrb
 from send_module import final_payout
 from send_module import send_faucet
 from send_module import send_discord
+from send_module import search_pending
+from send_module import rapid_process_send
 from decimal import Decimal
 
 from redis import Redis
@@ -46,7 +48,6 @@ account_count = 0
 server_balance = 0
 scoreboard = {}
 overall_score_board = {}
-theory_balance = 0
 
 def get_data(json_request):
     try:
@@ -62,7 +63,10 @@ def get_frontier(account):
     if r == "Error":
         return "Error"
     resulting_data = r.json()
-    frontier = resulting_data['frontier']
+    if 'frontier' in resulting_data:
+        frontier = resulting_data['frontier']
+    else:
+        frontier = 'Error'
     return frontier
 
 def get_balance(account):
@@ -90,8 +94,12 @@ def get_account_count(account):
     if r == "Error":
         return "Error"
     resulting_data = r.json()
-    account_count = resulting_data['block_count']
-    return account_count
+    if 'block_count' in resulting_data:
+        account_count = resulting_data['block_count']
+        return account_count
+
+    else:
+        return "Error"
 
 def get_account_history(account, count):
     json_request = '{"action" : "account_history", "account" : "%s", "count" : "%d"}' % (account, count)
@@ -105,10 +113,6 @@ def get_account_history(account, count):
 def kill_payout(dest_address):
     #We need to calculate how much to give
     raw_balance = get_balance(settings.source_account)
-    if int(raw_balance) == 0:
-        print("Error - difference between theory and actual balances")
-        global theory_balance
-        raw_balance = int(float(theory_balance) * float(raw))
     print("Raw {}".format(raw_balance))
     amount = int( (int(raw_balance) * 0.75) / (len(paid_in_players) * frag_limit) )
     print('Amount {}'.format(amount))
@@ -278,8 +282,6 @@ class SimpleTcpClient(object):
                     hash_list.clear()
                     paid_in_players.clear()
                     name_address.clear()
-                    global theory_balance
-                    theory_balance = 0
 
 
                 elif split_data[0] == "poll":
@@ -344,8 +346,8 @@ class SimpleTcpServer(tornado.tcpserver.TCPServer):
 def check_account():
     global account_count
     global server_balance
-    global theory_balance
 
+    result = q.enqueue(search_pending, settings.source_account, api_key)
     current_count = get_account_count(settings.source_account)
     if(int(current_count) > int(account_count)):
         count = int(current_count) - int(account_count)
@@ -380,7 +382,6 @@ def check_account():
                         print("{} has paid in".format(blocks['account']))
                         paid_in_players.append(blocks['account'])
                         message_list.append("{} has paid in".format(blocks['account']))
-                        theory_balance += 0.1
                         json_request = '{"game" : "quake2", "player" : "%s", "action": "pay_in", "address" : "%s"}' % (name_address[blocks['account']], blocks['account'])
                         send_discord(json_request)
 
@@ -388,11 +389,15 @@ def check_account():
     account_count = current_count
     server_balance = Decimal(get_balance(settings.source_account)) / Decimal(raw)
 
+@tornado.gen.coroutine
+def check_faucet():
+    #Periodically check the faucet account for new blocks
+    result = q.enqueue(search_pending, settings.faucet_account, api_key)
+
 class Data_Callback(tornado.web.RequestHandler):
     @tornado.gen.coroutine
     def post(self):
         global server_balance
-        global theory_balance
         receive_time = time.strftime("%d/%m/%Y %H:%M:%S")
         post_data = json.loads(self.request.body.decode('utf-8'))
         block_data = json.loads(post_data['block'])
@@ -413,7 +418,9 @@ class Data_Callback(tornado.web.RequestHandler):
                    print("{} has paid in".format(block_data['account']))
                    paid_in_players.append(block_data['account'])
                    message_list.append("{} has paid in".format(block_data['account']))
-                   theory_balance += 0.1
+                   # Trigger pending search
+                   #rapid_process_send(block_hash, balance, account, api_key)
+                   result = q.enqueue(rapid_process_send, post_data['hash'], post_data['amount'], settings.source_account, api_key)
                    json_request = '{"game" : "quake2", "player" : "%s", "action": "pay_in", "address" : "%s"}' % (name_address[block_data['account']], block_data['account'])
                    send_discord(json_request)
 
@@ -434,8 +441,11 @@ def main():
     # callback server
     application.listen(7090)
     #
-    pc = tornado.ioloop.PeriodicCallback(check_account, 2500)
+    pc = tornado.ioloop.PeriodicCallback(check_account, 5000)
     pc.start()
+
+    faucet_check = tornado.ioloop.PeriodicCallback(check_faucet, 20000)
+    faucet_check.start()
 
     # infinite loop
     tornado.ioloop.IOLoop.instance().start()
