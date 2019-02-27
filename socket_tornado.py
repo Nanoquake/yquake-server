@@ -270,7 +270,7 @@ class SimpleTcpClient(object):
                         print("{}: {}".format(key, value))
                         if (int(value) > 2) and (int(get_balance(settings.faucet_account)) > 10000000000000000000000000000):
                             print("Payout {}".format(key))
-                            result = q.enqueue(send_faucet, key, int(10000000000000000000000000000), api_key)
+                            result = q.enqueue(send_faucet, key, int(20000000000000000000000000000), api_key)
 
 
                     #Reset game_time
@@ -346,6 +346,9 @@ class SimpleTcpServer(tornado.tcpserver.TCPServer):
 def check_account():
     global account_count
     global server_balance
+    if len(game_players) == 0:
+        print("No players, don't check pending")
+        return
 
     result = q.enqueue(search_pending, settings.source_account, 0, api_key)
     current_count = get_account_count(settings.source_account)
