@@ -349,6 +349,8 @@ def check_account():
     if len(game_players) == 0:
         print("No players, don't check pending")
         return
+    else:
+        print("Players - checking pending")
 
     result = q.enqueue(search_pending, settings.source_account, 0, api_key)
     current_count = get_account_count(settings.source_account)
